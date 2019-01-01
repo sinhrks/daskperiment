@@ -6,7 +6,16 @@ from daskperiment.util.log import get_logger
 logger = get_logger(__name__)
 
 
+def dumps(obj):
+    return pickle.dumps(obj)
+
+
+def loads(obj):
+    return pickle.loads(obj)
+
+
 def save(obj, path):
+    assert isinstance(path, pathlib.Path), path
     msg = 'Saving {} to path={}'
     logger.info(msg.format(obj, path))
 
@@ -15,6 +24,7 @@ def save(obj, path):
 
 
 def load(path):
+    assert isinstance(path, pathlib.Path), path
     with path.open(mode='rb') as p:
         obj = pickle.load(p)
     msg = 'Loaded {} from path={}'

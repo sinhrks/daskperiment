@@ -5,8 +5,8 @@ import pandas as pd
 import pandas.testing as tm
 
 import daskperiment
+from daskperiment.backend import init_backend
 from daskperiment.core.errors import TrialIDNotFoundError
-from daskperiment.core.metric import init_metricmanager
 
 
 class MetricManagerBase(object):
@@ -15,8 +15,12 @@ class MetricManagerBase(object):
     def backend(self):
         raise NotImplementedError
 
+    @property
+    def metrics(self):
+        return init_backend('dummy_experiment', self.backend).metrics
+
     def test_invalid_id(self):
-        m = init_metricmanager(self.backend)
+        m = self.metrics
 
         msg = 'Metric name must be str, given:'
         with pytest.raises(ValueError, match=msg):
@@ -27,7 +31,7 @@ class MetricManagerBase(object):
             m.save('exp', "aa:aa", trial_id=11, epoch=1, value=2)
 
     def test_save(self):
-        m = init_metricmanager(self.backend)
+        m = self.metrics
 
         m.save('exp', 'dummy_metric1', trial_id=11, epoch=1, value=2)
         res = m.load('exp', 'dummy_metric1', trial_id=[11])
@@ -50,7 +54,7 @@ class MetricManagerBase(object):
         tm.assert_frame_equal(res, exp)
 
     def test_save_multi_trial_id(self):
-        m = init_metricmanager(self.backend)
+        m = self.metrics
 
         m.save('exp', 'dummy_metric3', trial_id=11, epoch=1, value=2)
         m.save('exp', 'dummy_metric3', trial_id=11, epoch=2, value=3)
@@ -84,7 +88,7 @@ class MetricManagerBase(object):
         tm.assert_frame_equal(res, exp)
 
     def test_error(self):
-        m = init_metricmanager(self.backend)
+        m = self.metrics
 
         m.save('exp', 'error_metric', trial_id=11, epoch=1, value=2)
         with pytest.raises(ValueError):
