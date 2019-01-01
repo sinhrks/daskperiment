@@ -1,11 +1,11 @@
 language: python
 
 env:
-  - PYTHON=3.5 DASK=1.0.0 PANDAS=0.19.2
-  - PYTHON=3.5 DASK=1.0.0 PANDAS=0.20.2
+  - PYTHON=3.6 DASK=1.0.0 PANDAS=0.20.2
   - PYTHON=3.6 DASK=1.0.0 PANDAS=0.21.1
-  - PYTHON=3.7 DASK=1.0.0 PANDAS=0.22.0
-  - PYTHON=3.7 DASK=1.0.0 PANDAS=0.23.2 COVERAGE=true
+  - PYTHON=3.6 DASK=1.0.0 PANDAS=0.22.0
+  - PYTHON=3.7 DASK=1.0.0 PANDAS=0.23.2
+  - PYTHON=3.7 DASK=1.0.0 PANDAS=0.24.0 COVERAGE=true
 
 addons:
   apt:
@@ -24,7 +24,7 @@ script:
   - export PATH="$HOME/miniconda/bin:$PATH"
   - source activate myenv
   - pytest --cov=daskperiment daskperiment
-  - flake8 --ignore daskperiment
+  - flake8 daskperiment
 
 after_success:
   - if [ "$COVERAGE" ]; then

@@ -1,3 +1,5 @@
+import pytest
+
 import subprocess
 import sys
 
@@ -5,6 +7,7 @@ import pandas as pd
 import pandas.testing as tm
 
 import daskperiment
+import daskperiment.testing
 
 
 class TestCommand(object):
@@ -20,6 +23,8 @@ class TestCommand(object):
         e = daskperiment.Experiment('simple_experiment_pj')
         e._delete_cache()
 
+    @pytest.mark.skipif(daskperiment.testing.IS_TRAVIS,
+                        reason='skip on Travis CI')
     def test_simple_experiment(self):
         e = daskperiment.Experiment('simple_experiment_pj')
         assert e._trial_id == 0

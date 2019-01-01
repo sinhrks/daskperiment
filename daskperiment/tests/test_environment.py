@@ -1,6 +1,10 @@
+import pytest
+
 import subprocess
 import sys
 
+import daskperiment
+import daskperiment.testing
 from daskperiment.core.environment import Environment
 
 
@@ -10,6 +14,8 @@ class TestEnvironment(object):
         e = Environment()
         assert e.get_python_mode() == 'Test'
 
+    @pytest.mark.skipif(daskperiment.testing.IS_TRAVIS,
+                        reason='skip on Travis CI')
     def test_python_mode_file(self):
         file = 'scripts/environment_check.py'
 

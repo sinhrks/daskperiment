@@ -28,7 +28,7 @@ class TestExperiment(object):
         assert repr(ex) == 'Experiment(id: test_repr, trial_id: 0)'
 
         a = ex.parameter('a')
-        
+
         @ex.result
         def inc(a):
             return a + 1
