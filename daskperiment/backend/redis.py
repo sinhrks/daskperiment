@@ -10,7 +10,7 @@ logger = get_logger(__name__)
 class RedisBackend(_BaseBackend):
 
     def __init__(self, experiment_id, uri):
-        self.experiment_id = experiment_id
+        super().__init__(experiment_id)
         self.uri = uri
 
     def __getstate__(self):
@@ -34,33 +34,33 @@ class RedisBackend(_BaseBackend):
     def metrics(self):
         if not hasattr(self, '_metrics'):
             from daskperiment.core.metric.redis import RedisMetricManager
-            self._metrics = RedisMetricManager(self)
+            self._metrics = RedisMetricManager(backend=self)
         return self._metrics
 
     @property
     def trials(self):
         if not hasattr(self, '_trials'):
             from daskperiment.core.trial import RedisTrialManager
-            self._trials = RedisTrialManager(self.experiment_id, backend=self)
+            self._trials = RedisTrialManager(backend=self)
         return self._trials
 
-    def get_persist_key(self, experiment_id, step, trial_id):
+    def get_persist_key(self, step, trial_id):
         """
         Get Redis key to save persisted results
         """
-        return '{}:persist:{}:{}'.format(experiment_id, step, trial_id)
+        return '{}:persist:{}:{}'.format(self.experiment_id, step, trial_id)
 
-    def get_code_key(self, experiment_id, trial_id):
+    def get_code_key(self, trial_id):
         """
         Get Redis key to save code
         """
-        return '{}:code:{}'.format(experiment_id, trial_id)
+        return '{}:code:{}'.format(self.experiment_id, trial_id)
 
-    def get_python_package_key(self, experiment_id, trial_id):
-        return '{}:requirements:{}'.format(experiment_id, trial_id)
+    def get_python_package_key(self, trial_id):
+        return '{}:requirements:{}'.format(self.experiment_id, trial_id)
 
-    def get_device_info_key(self, experiment_id, trial_id):
-        return '{}:device:{}'.format(experiment_id, trial_id)
+    def get_device_info_key(self, trial_id):
+        return '{}:device:{}'.format(self.experiment_id, trial_id)
 
     def get_trial_id_from_key(self, key):
         assert isinstance(key, (str, bytes)), key

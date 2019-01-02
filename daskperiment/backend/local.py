@@ -12,15 +12,15 @@ logger = get_logger(__name__)
 class LocalBackend(_BaseBackend):
 
     def __init__(self, experiment_id, cache_dir):
-        self.experient_id = experiment_id
+        super().__init__(experiment_id)
         self.cache_dir = cache_dir
         self.initialize_backend()
 
         from daskperiment.core.metric.local import LocalMetricManager
-        self.metrics = LocalMetricManager(self.cache_dir)
+        self.metrics = LocalMetricManager(backend=self)
 
         from daskperiment.core.trial import LocalTrialManager
-        self.trials = LocalTrialManager(experiment_id, backend=self)
+        self.trials = LocalTrialManager(backend=self)
 
     def initialize_backend(self):
         pickle.maybe_create_dir('cache', self.cache_dir)
@@ -43,29 +43,27 @@ class LocalBackend(_BaseBackend):
     def persist_dir(self):
         return self.cache_dir / 'persist'
 
-    def get_persist_key(self, experiment_id, step, trial_id):
+    def get_persist_key(self, step, trial_id):
         """
         Get Path instance to save persisted results
         """
-        fname = '{}_{}_{}.pkl'.format(experiment_id, step, trial_id)
+        fname = '{}_{}_{}.pkl'.format(self.experiment_id, step, trial_id)
         return self.persist_dir / fname
 
-    def get_code_key(self, experiment_id, trial_id):
+    def get_code_key(self, trial_id):
         """
         Get Path instance to save code
         """
-        fname = '{}_{}.py'.format(experiment_id, trial_id)
+        fname = '{}_{}.py'.format(self.experiment_id, trial_id)
         return self.code_dir / fname
 
-    def get_python_package_key(self, experiment_id, trial_id):
-        fname = 'requirements_{}_{}.txt'.format(experiment_id, trial_id)
-        path = self.environment_dir / fname
-        return path
+    def get_python_package_key(self, trial_id):
+        fname = 'requirements_{}_{}.txt'.format(self.experiment_id, trial_id)
+        return self.environment_dir / fname
 
-    def get_device_info_key(self, experiment_id, trial_id):
-        fname = 'device_{}_{}.txt'.format(experiment_id, trial_id)
-        path = self.environment_dir / fname
-        return path
+    def get_device_info_key(self, trial_id):
+        fname = 'device_{}_{}.txt'.format(self.experiment_id, trial_id)
+        return self.environment_dir / fname
 
     def save_text(self, key, text):
         """

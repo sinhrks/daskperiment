@@ -100,13 +100,13 @@ class TrialManagerBase(object):
 
         params = dict(a=True, b=pd.Timestamp('2011-01-01'),
                       c=pd.Timedelta('1 days'))
-        t.save_history(params=params)
+        t.save_history(params)
         t.unlock()
 
         res = t.increment()
         assert res == trial_id + 1
 
-        t.save_history(params=dict(a=1, b='xx'))
+        t.save_history(dict(a=1, b='xx'))
 
         history = t.get_result_history()
         assert isinstance(history, dict), history

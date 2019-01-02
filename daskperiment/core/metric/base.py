@@ -5,15 +5,19 @@ from daskperiment.util.text import validate_key
 
 class _MetricManager(object):
 
-    def save(self, experiment_id, metric_key, trial_id, epoch, value):
+    def __init__(self, backend):
+        self.backend = backend
+
+    def save(self, metric_key, trial_id, epoch, value):
         """
         Save metrics to MetricManager
         """
         metric_key = validate_key(metric_key, keyname='Metric name')
-        return self._save(experiment_id=experiment_id, metric_key=metric_key,
-                          trial_id=trial_id, epoch=epoch, value=value)
+        return self._save(metric_key=metric_key,
+                          trial_id=trial_id, epoch=epoch,
+                          value=value)
 
-    def load(self, experiment_id, metric_key, trial_id):
+    def load(self, metric_key, trial_id):
         """
         Loading metrics from (multiple) trial id
         """
@@ -22,8 +26,7 @@ class _MetricManager(object):
         if not pd.api.types.is_list_like(trial_id):
             trial_id = [trial_id]
 
-        metrics = [self._load_single(experiment_id=experiment_id,
-                                     metric_key=metric_key,
+        metrics = [self._load_single(metric_key=metric_key,
                                      trial_id=i)
                    for i in trial_id]
 

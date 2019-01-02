@@ -1,6 +1,7 @@
 import inspect
 import os
 
+from daskperiment.backend import init_backend
 from daskperiment.util.diff import unified_diff
 from daskperiment.util.log import get_logger
 from daskperiment.util.text import trim_indent
@@ -11,19 +12,14 @@ logger = get_logger(__name__)
 
 class CodeManager(object):
 
-    def __init__(self, codes=None, history=None):
+    def __init__(self, backend):
+        self.backend = init_backend(backend=backend)
+
         # Track registered code's key in CURRENT Experiment
-        # (do not care for cached result, not pickled)
-        if codes is None:
-            self.codes = []
-        else:
-            self.codes = codes
+        self.codes = []
 
         # Track registered code's key and context in ALL PREVIOUS Experiments
-        if history is None:
-            self.history = {}
-        else:
-            self.history = history
+        self.history = {}
 
     def __getstate__(self):
         state = {}
@@ -34,10 +30,6 @@ class CodeManager(object):
     def __setstate__(self, state):
         self.codes = []
         self.history = state['history']
-
-    def copy(self):
-        return CodeManager(codes=self.codes,
-                           history=self.history)
 
     def _get_code_context(self, func):
         try:
@@ -75,3 +67,22 @@ class CodeManager(object):
         """
         codes = [self.history[key] for key in self.codes]
         return (os.linesep + os.linesep).join(codes)
+
+    def save(self, trial_id):
+        key = self.backend.get_code_key(trial_id)
+        msg = 'Saving code context: {}'
+        logger.info(msg.format(key))
+
+        code_context = self.describe()
+        header = '# Code output saved in trial_id={}'.format(trial_id)
+        code_context = header + os.linesep + code_context
+
+        self.backend.save_text(key, code_context)
+
+    def load(self, trial_id):
+        key = self.backend.get_code_key(trial_id)
+        code_context = self.backend.load_text(key)
+
+        # skip header
+        codes = code_context.splitlines()[1:]
+        return os.linesep.join(codes) + os.linesep

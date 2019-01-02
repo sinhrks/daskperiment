@@ -8,7 +8,7 @@ from daskperiment.util.diff import unified_diff
 class TestCodeManager(object):
 
     def test_describe(self):
-        c = CodeManager()
+        c = CodeManager('local')
 
         def a(x, y):
             return 0
@@ -32,8 +32,8 @@ def b(x, y, z):
 """
         assert c.describe() == exp
 
-    def test_copy(self):
-        c = CodeManager()
+    def test_overwrite(self):
+        c = CodeManager('local')
 
         def a(x, y):
             return 0
@@ -44,7 +44,6 @@ def b(x, y, z):
         c.register(a)
         c.register(b)
 
-        n = c.copy()
         exp = """def a(x, y):
     return 0
 
@@ -52,34 +51,38 @@ def b(x, y, z):
 def b(x, y, z):
     return 15
 """
-        assert n.describe() == exp
-
-        c = CodeManager()
+        assert c.describe() == exp
 
         def a(x, y):
-            return 0
+            return 1
 
         c.register(a)
+
         exp = """def a(x, y):
-    return 0
+    return 1
+
+
+def b(x, y, z):
+    return 15
 """
         assert c.describe() == exp
 
         def b(x, y, z):
-            return 15
+            return 16
 
         c.register(b)
+
         exp = """def a(x, y):
-    return 0
+    return 1
 
 
 def b(x, y, z):
-    return 15
+    return 16
 """
         assert c.describe() == exp
 
     def test_code_diff(self):
-        c = CodeManager()
+        c = CodeManager('local')
 
         def inc(a):
             return a + 1
@@ -122,7 +125,7 @@ def gfunc(a, b):
 class TestCodeContext(object):
 
     def test_code_context_global(self):
-        c = CodeManager()
+        c = CodeManager('local')
 
         res = c._get_code_context(gfunc)
         exp = """def gfunc(a, b):
@@ -143,7 +146,7 @@ class TestCodeContext(object):
         assert res == exp
 
     def test_code_context(self):
-        c = CodeManager()
+        c = CodeManager('local')
 
         def inc(a):
             return a + 1

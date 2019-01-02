@@ -24,30 +24,30 @@ class MetricManagerBase(object):
 
         msg = 'Metric name must be str, given:'
         with pytest.raises(ValueError, match=msg):
-            m.save('exp', 1, trial_id=11, epoch=1, value=2)
+            m.save(1, trial_id=11, epoch=1, value=2)
 
         msg = 'Metric name cannot contain colon '
         with pytest.raises(ValueError, match=msg):
-            m.save('exp', "aa:aa", trial_id=11, epoch=1, value=2)
+            m.save("aa:aa", trial_id=11, epoch=1, value=2)
 
     def test_save(self):
         m = self.metrics
 
-        m.save('exp', 'dummy_metric1', trial_id=11, epoch=1, value=2)
-        res = m.load('exp', 'dummy_metric1', trial_id=[11])
+        m.save('dummy_metric1', trial_id=11, epoch=1, value=2)
+        res = m.load('dummy_metric1', trial_id=[11])
         exp_idx = pd.Index([1], name='Epoch')
         exp_columns = pd.Index([11], name='Trial ID')
         exp = pd.DataFrame({11: [2]}, index=exp_idx, columns=exp_columns)
         tm.assert_frame_equal(res, exp)
 
-        m.save('exp', 'dummy_metric2', trial_id=11, epoch=1, value=5)
-        res = m.load('exp', 'dummy_metric2', trial_id=[11])
+        m.save('dummy_metric2', trial_id=11, epoch=1, value=5)
+        res = m.load('dummy_metric2', trial_id=[11])
         exp_idx = pd.Index([1], name='Epoch')
         exp_columns = pd.Index([11], name='Trial ID')
         exp = pd.DataFrame({11: [5]}, index=exp_idx, columns=exp_columns)
         tm.assert_frame_equal(res, exp)
 
-        res = m.load('exp', 'dummy_metric1', trial_id=[11])
+        res = m.load('dummy_metric1', trial_id=[11])
         exp_idx = pd.Index([1], name='Epoch')
         exp_columns = pd.Index([11], name='Trial ID')
         exp = pd.DataFrame({11: [2]}, index=exp_idx, columns=exp_columns)
@@ -56,19 +56,19 @@ class MetricManagerBase(object):
     def test_save_multi_trial_id(self):
         m = self.metrics
 
-        m.save('exp', 'dummy_metric3', trial_id=11, epoch=1, value=2)
-        m.save('exp', 'dummy_metric3', trial_id=11, epoch=2, value=3)
-        m.save('exp', 'dummy_metric3', trial_id=11, epoch=3, value=4)
+        m.save('dummy_metric3', trial_id=11, epoch=1, value=2)
+        m.save('dummy_metric3', trial_id=11, epoch=2, value=3)
+        m.save('dummy_metric3', trial_id=11, epoch=3, value=4)
 
-        m.save('exp', 'dummy_metric3', trial_id=12, epoch=1, value=5)
+        m.save('dummy_metric3', trial_id=12, epoch=1, value=5)
 
-        res = m.load('exp', 'dummy_metric3', trial_id=12)
+        res = m.load('dummy_metric3', trial_id=12)
         exp_idx = pd.Index([1], name='Epoch')
         exp_columns = pd.Index([12], name='Trial ID')
         exp = pd.DataFrame({12: [5]}, index=exp_idx, columns=exp_columns)
         tm.assert_frame_equal(res, exp)
 
-        res = m.load('exp', 'dummy_metric3', trial_id=[11, 12])
+        res = m.load('dummy_metric3', trial_id=[11, 12])
         exp_idx = pd.Index([1, 2, 3], name='Epoch')
         exp_columns = pd.Index([11, 12], name='Trial ID')
         exp = pd.DataFrame({11: [2, 3, 4],
@@ -76,10 +76,10 @@ class MetricManagerBase(object):
                            index=exp_idx, columns=exp_columns)
         tm.assert_frame_equal(res, exp)
 
-        m.save('exp', 'dummy_metric3', trial_id=15, epoch=1, value=10)
-        m.save('exp', 'dummy_metric3', trial_id=15, epoch=2, value=11)
+        m.save('dummy_metric3', trial_id=15, epoch=1, value=10)
+        m.save('dummy_metric3', trial_id=15, epoch=2, value=11)
 
-        res = m.load('exp', 'dummy_metric3', trial_id=[12, 15])
+        res = m.load('dummy_metric3', trial_id=[12, 15])
         exp_idx = pd.Index([1, 2], name='Epoch')
         exp_columns = pd.Index([12, 15], name='Trial ID')
         exp = pd.DataFrame({12: [5, np.nan],
@@ -90,16 +90,16 @@ class MetricManagerBase(object):
     def test_error(self):
         m = self.metrics
 
-        m.save('exp', 'error_metric', trial_id=11, epoch=1, value=2)
+        m.save('error_metric', trial_id=11, epoch=1, value=2)
         with pytest.raises(ValueError):
-            m.load('exp', 'wrong_metric', trial_id=[11])
+            m.load('wrong_metric', trial_id=[11])
 
         match = 'Unable to find trial id:'
         with pytest.raises(TrialIDNotFoundError, match=match):
-            m.load('exp', 'error_metric', trial_id=[99])
+            m.load('error_metric', trial_id=[99])
 
         with pytest.raises(TrialIDNotFoundError, match=match):
-            m.load('exp', 'error_metric', trial_id=[11, 99])
+            m.load('error_metric', trial_id=[11, 99])
 
     def test_metric_experiment(self):
         ex = daskperiment.Experiment('metric_experiment', backend=self.backend)

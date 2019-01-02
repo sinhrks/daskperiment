@@ -11,7 +11,7 @@ from daskperiment.core.environment import Environment
 class TestEnvironment(object):
 
     def test_pip_packages(self):
-        e = Environment()
+        e = Environment('local')
         res = e.get_python_packages()
         assert any(r.startswith('pandas==') for r in res)
 
@@ -19,7 +19,7 @@ class TestEnvironment(object):
 class TestPythonMode(object):
 
     def test_python_mode_test(self):
-        e = Environment()
+        e = Environment('local')
         assert e.get_python_mode() == 'Test'
 
     @pytest.mark.skipif(daskperiment.testing.IS_TRAVIS,
@@ -34,7 +34,7 @@ class TestPythonMode(object):
 
     def test_python_mode_prompt(self, capsys):
         script = ('from daskperiment.core.environment import Environment;'
-                  'e = Environment();'
+                  'e = Environment("local");'
                   'print(e.get_python_mode())')
 
         p = subprocess.Popen([sys.executable, '-c', script],

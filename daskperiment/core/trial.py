@@ -9,9 +9,38 @@ from daskperiment.core.parameter import ParameterManager, Undefined
 logger = get_logger(__name__)
 
 
+class TrialResult(object):
+
+    def __init__(self, result, success, finished,
+                 process_time, description):
+        self.result = result
+        self.success = success
+        self.finished = finished
+        self.process_time = process_time
+        self.description = description
+
+    def __repr__(self):
+        if self.success:
+            fmt = 'Result(value={}, SUCCEEDED)'
+        else:
+            fmt = 'Result(value={}, FAILED)'
+        return fmt.format(self.result)
+
+    def to_dict(self):
+        record = {'Result': self.result,
+                  'Success': self.success,
+                  'Finished': self.finished,
+                  'Process Time': self.process_time,
+                  'Description': self.description}
+        return record
+
+
 class _TrialManager(object):
 
     __lock = False
+
+    def __init__(self, backend):
+        self.backend = backend
 
     def is_locked(self):
         """
@@ -52,23 +81,20 @@ class _TrialManager(object):
             msg = "Current Trial ID only exists during a trial execution"
             raise TrialIDNotFoundError(msg)
 
-    def start_trial(self, params):
+    def start_trial(self):
         # increment trial id BEFORE experiment start
         self.increment()
 
         self._start_time = pd.Timestamp.now()
         msg = 'Started Experiment (trial id={})'
         logger.info(msg.format(self.current_trial_id))
-        logger.info('Parameters: {}'.format(params.describe()))
-        return self.save_parameters(params)
 
     def finish_trial(self, result, success, description):
         end_time = pd.Timestamp.now()
-        record = {'Result': result,
-                  'Success': success,
-                  'Finished': end_time,
-                  'Process Time': end_time - self._start_time,
-                  'Description': description}
+        record = TrialResult(result=result, success=success,
+                             finished=end_time,
+                             process_time=end_time - self._start_time,
+                             description=description)
         self.save_history(record)
 
         msg = 'Finished Experiment (trial id={})'
@@ -78,8 +104,15 @@ class _TrialManager(object):
 
     def save_parameters(self, params):
         if isinstance(params, ParameterManager):
+            logger.info('Parameters: {}'.format(params.describe()))
             params = params.to_dict()
+        # TODO raise otherwise
         return self._save_parameters(params)
+
+    def save_history(self, result):
+        if isinstance(result, TrialResult):
+            result = result.to_dict()
+        self._save_history(result)
 
     def get_history(self):
         params = self.get_parameter_history()
@@ -100,7 +133,8 @@ class _TrialManager(object):
 
 class LocalTrialManager(_TrialManager):
 
-    def __init__(self, experiment_id, backend):
+    def __init__(self, backend):
+        super().__init__(backend)
         self._trial_id = 0
         self._parameters_history = {}
         self._result_history = {}
@@ -128,7 +162,7 @@ class LocalTrialManager(_TrialManager):
     def load_parameters(self, trial_id):
         return self._parameters_history[trial_id]
 
-    def save_history(self, params):
+    def _save_history(self, params):
         self._result_history[self.current_trial_id] = params
 
     def get_parameter_history(self):
@@ -140,13 +174,13 @@ class LocalTrialManager(_TrialManager):
 
 class RedisTrialManager(_TrialManager):
 
-    def __init__(self, experiment_id, backend):
-        self.experiment_id = experiment_id
-        self.backend = backend
-
     @property
     def client(self):
         return self.backend.client
+
+    @property
+    def experiment_id(self):
+        return self.backend.experiment_id
 
     @property
     def _trial_id_key(self):
@@ -187,7 +221,7 @@ class RedisTrialManager(_TrialManager):
         key = self.get_parameter_key(trial_id)
         return self.backend.load_object(key)
 
-    def save_history(self, params):
+    def _save_history(self, params):
         key = self.get_history_key(self.current_trial_id)
         self.backend.save_object(key, params)
 
