@@ -1,7 +1,8 @@
 import datetime
 from logging import (getLogger, FileHandler, StreamHandler,
                      Formatter, INFO, DEBUG)
-import pathlib
+
+from daskperiment.config import _LOG_DIR
 
 
 _TIME_FMT = datetime.datetime.today().strftime('%Y%m%d_%H%M%S')
@@ -9,7 +10,6 @@ _FILE_FMT = 'log_{}.log'
 
 _FORMATTER = Formatter('%(asctime)s [%(name)s] [%(levelname)s] %(message)s')
 
-_LOG_DIR = pathlib.Path('log')
 _LOG_LEVEL = 'DEBUG'
 
 if not _LOG_DIR.exists():

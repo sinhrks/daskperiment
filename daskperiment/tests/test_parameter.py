@@ -1,6 +1,19 @@
 import pytest
 
 import daskperiment
+from daskperiment.core.parameter import ParameterManager, Undefined
+
+
+class TestUndefined(object):
+
+    def test_repr(self):
+        u = Undefined()
+        assert repr(u) == 'Undefined'
+
+    def test_eq(self):
+        u1 = Undefined()
+        u2 = Undefined()
+        assert u1 == u2
 
 
 class TestParameter(object):
@@ -41,3 +54,70 @@ class TestParameter(object):
         ex.set_parameters(a=5)
         assert (a + 1).compute() == 6
         assert (1 + a + 3).compute() == 9
+
+    def test_parameter_manager(self):
+        p = ParameterManager()
+        p.define('a')
+        p.define('b')
+
+        assert p.describe() == "a=Undefined, b=Undefined"
+
+        p.set(a=2)
+        assert p.describe() == "a=2<class 'int'>, b=Undefined"
+
+    def test_parameter_resolve(self):
+        p = ParameterManager()
+        a = p.define('a')
+        b = p.define('b')
+
+        p.set(a=2)
+        assert a.resolve() == 2
+
+        with pytest.raises(daskperiment.core.errors.ParameterUndefinedError):
+            b.resolve()
+
+        p.set(b=5)
+        assert b.resolve() == 5
+
+    def test_parameter_copy(self):
+        p = ParameterManager()
+        a = p.define('a')
+        b = p.define('b')
+
+        p.set(a=2, b=5)
+        assert p.describe() == "a=2<class 'int'>, b=5<class 'int'>"
+        assert a.resolve() == 2
+        assert b.resolve() == 5
+
+        n = p.copy()
+        assert n.describe() == "a=2<class 'int'>, b=5<class 'int'>"
+
+        assert a.resolve() == 2
+        assert b.resolve() == 5
+
+    def test_parameter_check_defined(self):
+        p = ParameterManager()
+        p.define('a')
+        p.define('b')
+
+        with pytest.raises(daskperiment.core.errors.ParameterUndefinedError):
+            p._check_all_defined()
+
+        p.set(a=2)
+        with pytest.raises(daskperiment.core.errors.ParameterUndefinedError):
+            p._check_all_defined()
+
+        p.set(b=5)
+        p._check_all_defined()
+
+    def test_parameter_to_dict(self):
+        p = ParameterManager()
+        p.define('a')
+        p.define('b')
+
+        exp = {'a': Undefined(), 'b': Undefined()}
+        assert p.to_dict() == exp
+
+        p.set(a=1)
+        exp = {'a': 1, 'b': Undefined()}
+        assert p.to_dict() == exp

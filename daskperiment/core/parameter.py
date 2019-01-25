@@ -2,12 +2,22 @@ from dask.delayed import Delayed
 
 from daskperiment.core.errors import (ParameterUndeclaredError,
                                       ParameterUndefinedError)
+from daskperiment.util.log import get_logger
+
+
+logger = get_logger(__name__)
 
 
 class Undefined(object):
 
     def __repr__(self):
         return 'Undefined'
+
+    def __eq__(self, other):
+        if isinstance(other, Undefined):
+            return True
+        else:
+            return False
 
 
 class Parameter(Delayed):
@@ -39,3 +49,55 @@ class Parameter(Delayed):
             msg = ('Parameter is not declared. '
                    'Use Experiment.parameter to declare: {}')
             raise ParameterUndeclaredError(msg.format(self._key))
+
+
+class ParameterManager(object):
+
+    def __init__(self, **kwargs):
+        self._parameters = kwargs
+
+    def copy(self):
+        return ParameterManager(**self._parameters)
+
+    def describe(self):
+        def _format(k, v):
+            # TODO: pretty print for long input
+            if not isinstance(v, Undefined):
+                return '{}={}{}'.format(k, v, type(v))
+            else:
+                return '{}={}'.format(k, v)
+
+        params = [_format(k, v)
+                  for k, v in self._parameters.items()]
+        return ', '.join(params)
+
+    def to_dict(self):
+        return dict(self._parameters)
+
+    def define(self, name):
+        if name in self._parameters:
+            msg = 'Parameter name must be unique in experiment: {}'
+            raise ValueError(msg.format(name))
+
+        self._parameters[name] = Undefined()
+        # resolve_parameter returns a function to resolve parameter
+        # otherwise parameter name collides in arg and dask_key_name
+        return Parameter(self, name)
+
+    def set(self, **kwargs):
+        for key, value in kwargs.items():
+            self._parameters[key] = value
+
+        msg = 'Updated parameters: {}'
+        logger.info(msg.format(self.describe()))
+
+    def _check_all_defined(self):
+        undefined = []
+        for k, v in self._parameters.items():
+            if isinstance(v, Undefined):
+                undefined.append(k)
+
+        if len(undefined) > 0:
+            msg = ('Parameters are not defined. '
+                   'Use Experiment.set_parameters to initialize: {}')
+            raise ParameterUndefinedError(msg.format(', '.join(undefined)))

@@ -42,9 +42,6 @@ class TestExperiment(object):
         ex.set_parameters(a=3)
         assert res.compute() == 10
 
-        assert ex.get_persisted('inc', trial_id=1) == 2
-        assert ex.get_persisted('inc', trial_id=2) == 4
-
     def test_persist(self):
         ex = daskperiment.Experiment(id="test_history")
         a = ex.parameter("a")
@@ -97,3 +94,61 @@ class TestExperiment(object):
         exp_idx = pd.Index([1], name='Epoch')
         exp = pd.DataFrame({0: [2], 1: [6]}, exp_idx)
         tm.assert_frame_equal(res, exp)
+
+    def test_code(self):
+        ex = daskperiment.Experiment(id="test_code")
+        a = ex.parameter("a")
+
+        @ex
+        def inc(a):
+            return a + 1
+
+        @ex.result
+        def add(a, b):
+            return a + b
+
+        res = add(inc(a), a)
+
+        exp = """        @ex
+        def inc(a):
+            return a + 1
+
+
+        @ex.result
+        def add(a, b):
+            return a + b
+"""
+        assert ex.get_code() == exp
+
+        ex.set_parameters(a=3)
+        assert res.compute() == 7
+        assert ex.get_code(trial_id=1) == exp
+
+    def test_code_persist(self):
+        ex = daskperiment.Experiment(id="test_code")
+        a = ex.parameter("a")
+
+        @ex.persist
+        def inc(a):
+            return a + 1
+
+        @ex.result
+        def add(a, b):
+            return a + b
+
+        res = add(inc(a), a)
+
+        exp = """        @ex.persist
+        def inc(a):
+            return a + 1
+
+
+        @ex.result
+        def add(a, b):
+            return a + b
+"""
+        assert ex.get_code() == exp
+
+        ex.set_parameters(a=3)
+        assert res.compute() == 7
+        assert ex.get_code(trial_id=1) == exp
