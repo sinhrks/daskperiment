@@ -14,7 +14,7 @@ daskperiment
 Overview
 ~~~~~~~~
 
-A lightweight tool to perform reproducible data analytics experiments using Dask.
+A lightweight tool to perform reproducible machine learning experiment using Dask.
 
 **The package is EXTREMELY unstable.**
 

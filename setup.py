@@ -11,8 +11,8 @@ REQUIREMENTS = 'requirements.txt'
 
 VERSION = '0.1.0.dev0'
 
-DESCRIPTION = ('A lightweight tool to perform reproducible data analytics '
-               'experiments using Dask.')
+DESCRIPTION = ('A lightweight tool to perform reproducible machine learning '
+               'experiment using Dask.')
 
 def read(fname):
   # file must be read as utf-8 in py3 to avoid to be bytes
