@@ -1,6 +1,7 @@
 import functools
 import pathlib
 
+import numpy as np
 import pandas as pd
 import dask
 
@@ -9,7 +10,8 @@ from dask.delayed import Delayed, DelayedLeaf
 
 from daskperiment.core.code import CodeManager
 from daskperiment.core.environment import Environment
-from daskperiment.core.errors import ParameterUndeclaredError
+from daskperiment.core.errors import (ParameterUndeclaredError,
+                                      TrialIDNotFoundError)
 from daskperiment.core.metric import MetricManager
 from daskperiment.core.parameter import ParameterManager, Undefined
 from daskperiment.core.parser import parse_command_arguments
@@ -50,7 +52,7 @@ class Result(Delayed):
         self.dask = dask_obj.dask
         self._length = dask_obj._length
 
-        self._experiment._result = self
+        self._experiment._result = True
         self._maybe_file()
 
     def compute(self, **kwargs):
@@ -61,10 +63,17 @@ class Result(Delayed):
         logger.info('Target: {}'.format(self._key))
         logger.info('Parameters: {}'.format(exp._parameters.describe()))
 
-        result = super().compute(**kwargs)
-
-        exp._finish_experiment_step(result)
-        return result
+        try:
+            result = super().compute(**kwargs)
+            exp._finish_experiment_step(result=result, success=True,
+                                        description=np.nan)
+            return result
+        except Exception as e:
+            description = '{}({})'.format(e.__class__.__name__, e)
+            logger.error('Experiment failed: {}'.format(description))
+            exp._finish_experiment_step(result=np.nan, success=False,
+                                        description=description)
+            raise
 
     def _maybe_file(self):
         """
@@ -74,7 +83,6 @@ class Result(Delayed):
             parameters = parse_command_arguments()
             self._experiment.set_parameters(**parameters)
             self.compute()
-            self._experiment.save()
 
 
 def persist_result(experiment, func):
@@ -96,51 +104,64 @@ def persist_result(experiment, func):
 
 class Experiment(object):
 
-    def __init__(self, id, version=0, cache=None):
+    _instance_cache = {}
+
+    def __new__(cls, id, cache=None):
+        # return the identical instance based on id
+        if id in cls._instance_cache:
+            return cls._instance_cache[id]
+
+        obj = super().__new__(cls)
 
         assert isinstance(id, str)
-        assert isinstance(version, (int, float))
 
-        self.id = id
-        self.version = version
-        self._trial_id = 0
-
-        self._parameters = ParameterManager()
-        self._result = Undefined()
-
-        # code management
-        self._codes = CodeManager()
-
-        # history management
-        self._parameters_history = {}
-        self._result_history = {}
-        self._code_history = {}
-
-        self._environment = Environment()
-        # TODO: move metrics management to sql
-        self._metrics = MetricManager()
+        obj.id = id
 
         if cache is None:
-            dname = '{}_{}'.format(self.id, self.version)
+            dname = '{}'.format(id)
             from daskperiment.config import _CACHE_DIR
             cache = _CACHE_DIR / dname
-        self._cache = cache
+        obj._cache = cache
 
+        cls._instance_cache[id] = obj
+        return obj
+
+    def __init__(self, id, cache=None):
+        """
+        Automatically load myself if cached pickle file exists
+        """
         cache_dir = self.cache_dir
         serialize.maybe_create_dir('cache', cache_dir)
 
-        self._autoload()
+        path = self.get_autosave_path()
+        if path.is_file():
+            exp = serialize.load(path)
+            self.__dict__.update(exp.__dict__)
 
+            # Create current Environment, and check the difference with
+            # pickled Environment
+            env = Environment()
+            env.check_diff(self._environment)
+            self._environment = env
+        else:
+            msg = 'Initialized new experiment: {}'
+            logger.info(msg.format(path))
+
+            self._initialize()
         # output environment info
         self._environment.describe()
 
     def __repr__(self):
-        msg = 'Experiment(id: {}, version: {}, trial_id: {})'
-        return msg.format(self.id, self.version, self._trial_id)
+        msg = 'Experiment(id: {}, trial_id: {})'
+        return msg.format(self.id, self._trial_id)
 
     @property
     def cache_dir(self):
         return pathlib.Path(self._cache)
+
+    ##########################################################
+    # Parameter
+    ##########################################################
 
     def parameter(self, name):
         return self._parameters.define(name)
@@ -149,39 +170,80 @@ class Experiment(object):
         self._parameters.set(**kwargs)
 
     def get_parameters(self, trial_id):
+        self._check_trial_id(trial_id)
         return self._parameters_history[trial_id].to_dict()
 
     ##########################################################
     # Save / load myself
     ##########################################################
 
+    def __getnewargs__(self):
+        return (self.id, self._cache)
+
     def save(self):
         path = self.get_autosave_path()
         serialize.save(self, path)
 
-    def _autoload(self):
-        path = self.get_autosave_path()
-        if path.is_file():
-            exp = serialize.load(path)
-            self.__dict__.update(exp.__dict__)
+    def _initialize(self):
+        self._trial_id = 0
 
-            # Clear cache
-            # TODO: compare these are identical
-            self._parameters = ParameterManager()
-            self._result = Undefined()
+        self._parameters = ParameterManager()
+        self._result = False
 
-            self._codes = CodeManager()
-        else:
-            msg = 'Initialized new experiment: {}'
-            logger.info(msg.format(path))
+        # code management
+        self._codes = CodeManager()
+
+        # history management
+        self._parameters_history = {}
+        self._result_history = {}
+
+        self._environment = Environment()
+        # TODO: move metrics management to sql
+        self._metrics = MetricManager()
+
+    def _delete_cache(self):
+        """
+        Delete cache dir
+        """
+        import shutil
+        shutil.rmtree(self.cache_dir)
 
     def get_autosave_path(self):
-        fname = '{}_{}.pkl'.format(self.id, self.version)
+        """
+        Get Path instance to save myself
+        """
+        fname = '{}.pkl'.format(self.id)
         return self.cache_dir / fname
 
+    @property
+    def persist_dir(self):
+        if not hasattr(self, '_persist_dir'):
+            persist_dir = self.cache_dir / 'persist'
+            serialize.maybe_create_dir('persist', persist_dir)
+            self._persist_dir = persist_dir
+        return self._persist_dir
+
     def get_persist_path(self, step, trial_id):
-        fname = '{}_{}_{}_{}.pkl'.format(self.id, self.version, step, trial_id)
-        return self.cache_dir / fname
+        """
+        Get Path instance to save persisted results
+        """
+        fname = '{}_{}_{}.pkl'.format(self.id, step, trial_id)
+        return self.persist_dir / fname
+
+    @property
+    def code_dir(self):
+        if not hasattr(self, '_code_dir'):
+            code_dir = self.cache_dir / 'code'
+            serialize.maybe_create_dir('code', code_dir)
+            self._code_dir = code_dir
+        return self._code_dir
+
+    def get_code_path(self, trial_id):
+        """
+        Get Path instance to save code
+        """
+        fname = '{}_{}.txt'.format(self.id, trial_id)
+        return self.code_dir / fname
 
     ##########################################################
     # Decorators
@@ -215,18 +277,32 @@ class Experiment(object):
         logger.info(msg.format(self._trial_id))
 
         self._parameters_history[self._trial_id] = self._parameters.copy()
-        self._code_history[self._trial_id] = self._codes.copy()
+
+        self._codes.save(self._trial_id, self.get_code_path(self._trial_id))
+
         self.check_executable()
 
-    def _finish_experiment_step(self, result):
+    def _finish_experiment_step(self, result, success, description):
         end_time = pd.Timestamp.now()
         record = {'Result': result,
+                  'Success': success,
                   'Finished': end_time,
-                  'Process Time': end_time - self._start_time}
+                  'Process Time': end_time - self._start_time,
+                  'Description': description}
         self._result_history[self._trial_id] = record
 
         msg = 'Finished Experiment (trial id={})'
         logger.info(msg.format(self._trial_id))
+
+        self.save()
+
+    def _check_trial_id(self, trial_id):
+        if not isinstance(trial_id, int):
+            msg = 'Trial id must be integer, given: {}{}'
+            msg.format(trial_id, type(trial_id))
+            raise TrialIDNotFoundError(msg.format(trial_id, type(trial_id)))
+        if trial_id <= 0 or self._trial_id < trial_id:
+            raise TrialIDNotFoundError(trial_id)
 
     def check_executable(self):
         """
@@ -239,7 +315,7 @@ class Experiment(object):
         self._parameters._check_all_defined()
 
     def _check_result_defined(self):
-        if isinstance(self._result, Undefined):
+        if not self._result:
             msg = ('Experiment result is not set. '
                    'Use Experiment.result decorator to define it')
             raise ParameterUndeclaredError(msg)
@@ -252,7 +328,8 @@ class Experiment(object):
         params = {k: v.to_dict() for k, v in self._parameters_history.items()}
         parameters = pd.DataFrame.from_dict(params,
                                             orient='index')
-        result_index = pd.Index(['Result', 'Finished', 'Process Time'])
+        result_index = pd.Index(['Result', 'Success', 'Finished',
+                                 'Process Time', 'Description'])
         results = pd.DataFrame.from_dict(self._result_history,
                                          orient='index', columns=result_index)
         results = parameters.join(results)
@@ -260,6 +337,8 @@ class Experiment(object):
         return results
 
     def get_persisted(self, step, trial_id):
+        self._check_trial_id(trial_id)
+
         path = self.get_persist_path(step, trial_id)
         return serialize.load(path)
 
@@ -271,7 +350,8 @@ class Experiment(object):
         if trial_id is None:
             return self._codes.describe()
         else:
-            return self._code_history[trial_id].describe()
+            self._check_trial_id(trial_id)
+            return self._codes.load(trial_id)
 
     ##########################################################
     # Metrics management
@@ -282,4 +362,9 @@ class Experiment(object):
                            epoch=epoch, value=value)
 
     def load_metric(self, key, trial_id):
+        if not pd.api.types.is_list_like(trial_id):
+            trial_id = [trial_id]
+
+        for i in trial_id:
+            self._check_trial_id(i)
         return self._metrics.load(key=key, trial_id=trial_id)

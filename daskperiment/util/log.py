@@ -10,7 +10,7 @@ _FILE_FMT = 'log_{}.log'
 
 _FORMATTER = Formatter('%(asctime)s [%(name)s] [%(levelname)s] %(message)s')
 
-_LOG_LEVEL = 'DEBUG'
+_LOG_LEVEL = 'INFO'
 
 if not _LOG_DIR.exists():
     _LOG_DIR.mkdir()

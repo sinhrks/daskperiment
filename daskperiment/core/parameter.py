@@ -76,10 +76,10 @@ class ParameterManager(object):
 
     def define(self, name):
         if name in self._parameters:
-            msg = 'Parameter name must be unique in experiment: {}'
-            raise ValueError(msg.format(name))
-
-        self._parameters[name] = Undefined()
+            msg = ('Re-defining existing parameter: {}')
+            logger.debug(msg.format(name))
+        else:
+            self._parameters[name] = Undefined()
         # resolve_parameter returns a function to resolve parameter
         # otherwise parameter name collides in arg and dask_key_name
         return Parameter(self, name)

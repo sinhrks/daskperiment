@@ -30,6 +30,8 @@ class TestParameter(object):
         assert repr(a) == "Parameter(a: 1<class 'int'>)"
         assert repr(b) == "Parameter(b: Undefined)"
 
+        ex._delete_cache()
+
     def test_compute(self):
         ex = daskperiment.Experiment(id="test_compute")
         a = ex.parameter("a")
@@ -43,6 +45,8 @@ class TestParameter(object):
         ex.set_parameters(a=3)
         assert a.compute() == 3
 
+        ex._delete_cache()
+
     def test_operator(self):
         ex = daskperiment.Experiment(id="test_operator")
         a = ex.parameter("a")
@@ -54,6 +58,8 @@ class TestParameter(object):
         ex.set_parameters(a=5)
         assert (a + 1).compute() == 6
         assert (1 + a + 3).compute() == 9
+
+        ex._delete_cache()
 
     def test_parameter_manager(self):
         p = ParameterManager()
@@ -78,6 +84,24 @@ class TestParameter(object):
 
         p.set(b=5)
         assert b.resolve() == 5
+
+    def test_parameter_redefine(self):
+        p = ParameterManager()
+
+        a1 = p.define('a')
+        assert p.describe() == "a=Undefined"
+        a2 = p.define('a')
+        assert p.describe() == "a=Undefined"
+
+        with pytest.raises(daskperiment.core.errors.ParameterUndefinedError):
+            a1.resolve()
+        with pytest.raises(daskperiment.core.errors.ParameterUndefinedError):
+            a2.resolve()
+
+        p.set(a=2)
+        assert p.describe() == "a=2<class 'int'>"
+        assert a1.resolve() == 2
+        assert a2.resolve() == 2
 
     def test_parameter_copy(self):
         p = ParameterManager()

@@ -19,7 +19,7 @@ class TestCommand(object):
 
         # cleanup
         e = daskperiment.Experiment('simple_experiment_pj')
-        shutil.rmtree(e.cache_dir)
+        e._delete_cache()
 
     def test_simple_experiment(self):
         e = daskperiment.Experiment('simple_experiment_pj')
@@ -53,4 +53,4 @@ class TestCommand(object):
 
         # cleanup
         e = daskperiment.Experiment('simple_experiment_pj')
-        shutil.rmtree(e.cache_dir)
+        e._delete_cache()
