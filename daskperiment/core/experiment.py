@@ -13,7 +13,7 @@ from daskperiment.core.environment import Environment
 from daskperiment.core.errors import (ParameterUndeclaredError,
                                       TrialIDNotFoundError)
 from daskperiment.core.metric import MetricManager
-from daskperiment.core.parameter import ParameterManager, Undefined
+from daskperiment.core.parameter import ParameterManager
 from daskperiment.core.parser import parse_command_arguments
 import daskperiment.io.serialize as serialize
 from daskperiment.util.log import get_logger
