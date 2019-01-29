@@ -330,8 +330,10 @@ class Experiment(object):
                                             orient='index')
         result_index = pd.Index(['Result', 'Success', 'Finished',
                                  'Process Time', 'Description'])
+        # pandas 0.22 or earlier does't support columns kw
         results = pd.DataFrame.from_dict(self._result_history,
-                                         orient='index', columns=result_index)
+                                         orient='index')
+        results = results.reindex(columns=result_index)
         results = parameters.join(results)
         results.index.name = 'Trial ID'
         return results
