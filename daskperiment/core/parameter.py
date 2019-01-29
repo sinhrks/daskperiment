@@ -1,3 +1,4 @@
+from dask.base import tokenize
 from dask.delayed import Delayed
 
 from daskperiment.core.errors import (ParameterUndeclaredError,
@@ -21,34 +22,37 @@ class Undefined(object):
 
 
 class Parameter(Delayed):
-    __slots__ = ('_experiment', '_key', 'dask', '_length')
+    __slots__ = ('_experiment', '_name', '_key', 'dask', '_length')
 
     def __init__(self, experiment, name, length=None):
         self._experiment = experiment
 
-        self._key = name
-        self.dask = {name: (self.resolve, )}
+        # parameter representation name, like "a"
+        self._name = name
+        # parameter with token, like "a-xxxx"
+        self._key = name + "-" + tokenize(name)
+        self.dask = {self._key: (self.resolve, )}
         self._length = length
 
     def __repr__(self):
-        val = self._experiment._parameters[self._key]
+        val = self._experiment._parameters[self._name]
         if isinstance(val, Undefined):
-            return 'Parameter({}: {})'.format(self._key, val)
+            return 'Parameter({}: {})'.format(self._name, val)
         else:
-            return 'Parameter({}: {}{})'.format(self._key, val, type(val))
+            return 'Parameter({}: {}{})'.format(self._name, val, type(val))
 
     def resolve(self):
         try:
-            param = self._experiment._parameters[self._key]
+            param = self._experiment._parameters[self._name]
             if isinstance(param, Undefined):
                 msg = ('Parameter is not defined. '
                        'Use Experiment.set_parameters to initialize: {}')
-                raise ParameterUndefinedError(msg.format(self._key))
+                raise ParameterUndefinedError(msg.format(self._name))
             return param
         except KeyError:
             msg = ('Parameter is not declared. '
                    'Use Experiment.parameter to declare: {}')
-            raise ParameterUndeclaredError(msg.format(self._key))
+            raise ParameterUndeclaredError(msg.format(self._name))
 
 
 class ParameterManager(object):
@@ -85,8 +89,8 @@ class ParameterManager(object):
         return Parameter(self, name)
 
     def set(self, **kwargs):
-        for key, value in kwargs.items():
-            self._parameters[key] = value
+        for name, value in kwargs.items():
+            self._parameters[name] = value
 
         msg = 'Updated parameters: {}'
         logger.info(msg.format(self.describe()))
