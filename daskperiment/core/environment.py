@@ -1,5 +1,4 @@
 import pathlib
-import pip
 import platform
 
 from daskperiment.util.diff import unified_diff
@@ -97,5 +96,5 @@ Current {key}: {current}""".format(cap_key=key.title(), key=key,
         """
         Lists installed python packages
         """
-        pkgs = pip.utils.get_installed_distributions()
-        return [repr(p) for p in pkgs]
+        import pkg_resources
+        return [repr(p) for p in pkg_resources.working_set]

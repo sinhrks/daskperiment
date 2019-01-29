@@ -15,6 +15,6 @@ conda info -a
 conda create -n myenv "python=$PYTHON"
 source activate myenv
 conda install openblas
-conda install "dask=$DASK" "pandas=$PANDAS" 
+conda install numpy "pandas=$PANDAS" "dask=$DASK" 
 
 python -m pip install pytest pytest-cov
