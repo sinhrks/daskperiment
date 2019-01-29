@@ -17,6 +17,5 @@ source activate myenv
 conda install openblas
 conda install numpy "pandas=$PANDAS" "dask=$DASK"
 
-python -m pip install python-coveralls coverage
+python -m pip install pytest pytest-cov codecov
 python -m pip install flake8
-python -m pip install pytest pytest-cov
