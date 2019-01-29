@@ -30,13 +30,13 @@ class Environment(object):
                 self._assert_diff(previous, attr_name, key)
             except ValueError as e:
                 for line in str(e).splitlines():
-                    logger.warn(line)
+                    logger.warning(line)
         if self.python_packages != previous.python_packages:
             msg = 'Installed Python packages have been changed'
-            logger.warn(msg)
+            logger.warning(msg)
             for d in unified_diff(previous.python_packages,
                                   self.python_packages, n=0):
-                logger.warn(d)
+                logger.warning(d)
         else:
             logger.debug("Installed Python packages are unchanged")
 

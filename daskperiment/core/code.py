@@ -45,9 +45,9 @@ class CodeManager(object):
         if key in self.history:
             if self.history[key] != source:
                 msg = 'Code context has been changed: {}'
-                logger.warn(msg.format(key))
+                logger.warning(msg.format(key))
                 for d in unified_diff(self.history[key], source):
-                    logger.warn(d)
+                    logger.warning(d)
         self.history[key] = source
 
         # if new key is being registered to CURRENT experiment
