@@ -165,6 +165,25 @@ class TestExperiment(object):
 
         ex._delete_cache()
 
+    def test_dup_param(self):
+        ex = daskperiment.Experiment(id="test_dup_param")
+        a = ex.parameter("a")
+
+        @ex.result
+        def concat(a, b):
+            return str(a) + b
+
+        # variable a is a parameter, str "a" isn't
+        res = concat(a, "a")
+
+        ex.set_parameters(a=1)
+        assert res.compute() == "1a"
+
+        ex.set_parameters(a="a")
+        assert res.compute() == "aa"
+
+        ex._delete_cache()
+
     def test_invalid_trial_id(self):
         ex = daskperiment.Experiment(id="test_invalid_trial")
         a = ex.parameter("a")
