@@ -8,8 +8,8 @@ daskperiment
     :alt: Latest Docs
 .. image:: https://travis-ci.org/sinhrks/daskperiment.svg?branch=master
     :target: https://travis-ci.org/sinhrks/daskperiment
-.. image:: https://coveralls.io/repos/sinhrks/daskperiment/badge.svg?branch=master&service=github
-    :target: https://coveralls.io/github/sinhrks/daskperiment?branch=master
+.. image:: https://codecov.io/gh/pandas-ml/pandas-ml/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/pandas-ml/pandas-ml
 
 Overview
 ~~~~~~~~
