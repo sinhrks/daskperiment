@@ -3,6 +3,7 @@ import os
 
 from daskperiment.util.diff import unified_diff
 from daskperiment.util.log import get_logger
+from daskperiment.util.text import trim_indent
 
 
 logger = get_logger(__name__)
@@ -38,9 +39,23 @@ class CodeManager(object):
         return CodeManager(codes=self.codes,
                            history=self.history)
 
+    def _get_code_context(self, func):
+        try:
+            source = inspect.getsource(func)
+            source = trim_indent(source)
+            return source
+        except Exception:
+            msg = 'Unable to get code context: '
+            logger.warning(msg.format(func.__name__))
+            return ''
+
     def register(self, func):
+        """
+        Register function's code context
+        """
         key = func.__name__
-        source = inspect.getsource(func)
+        source = self._get_code_context(func)
+
         # if key is found in ANY PREVIOUS experiments
         if key in self.history:
             if self.history[key] != source:
@@ -55,22 +70,8 @@ class CodeManager(object):
             self.codes.append(key)
 
     def describe(self):
+        """
+        Describe current code context
+        """
         codes = [self.history[key] for key in self.codes]
         return (os.linesep + os.linesep).join(codes)
-
-    def save(self, trial_id, path):
-        """
-        Save code context from file
-        """
-        header = '# Code output saved in trial_id={}'.format(trial_id)
-        self.history[trial_id] = path
-        path.write_text(header + os.linesep + self.describe())
-
-    def load(self, trial_id):
-        """
-        Load code context from file
-        """
-        codes = self.history[trial_id].read_text()
-        # skip header
-        codes = codes.split(os.linesep)[1:]
-        return os.linesep.join(codes)

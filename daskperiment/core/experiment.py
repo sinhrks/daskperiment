@@ -1,22 +1,21 @@
 import functools
-import pathlib
+import os
 
 import numpy as np
 import pandas as pd
 import dask
 
-# from dask.base import tokenize
 from dask.delayed import Delayed, DelayedLeaf
 
+from daskperiment.backend import init_backend
 from daskperiment.core.code import CodeManager
 from daskperiment.core.environment import Environment
-from daskperiment.core.errors import (ParameterUndeclaredError,
-                                      TrialIDNotFoundError)
-from daskperiment.core.metric import MetricManager
+from daskperiment.core.errors import TrialIDNotFoundError
 from daskperiment.core.parameter import ParameterManager
 from daskperiment.core.parser import parse_command_arguments
 import daskperiment.io.serialize as serialize
 from daskperiment.util.log import get_logger
+from daskperiment.util.text import validate_key
 
 
 logger = get_logger(__name__)
@@ -95,7 +94,7 @@ def persist_result(experiment, func):
 
         result = func(*args, **kwargs)
 
-        path = experiment.get_persist_path(func.__name__, experiment._trial_id)
+        path = experiment.get_persist_path(func.__name__, experiment.trial_id)
         serialize.save(result, path)
         return result
 
@@ -106,15 +105,14 @@ class Experiment(object):
 
     _instance_cache = {}
 
-    def __new__(cls, id, cache=None):
+    def __new__(cls, id, cache=None, backend='local'):
         # return the identical instance based on id
         if id in cls._instance_cache:
             return cls._instance_cache[id]
 
         obj = super().__new__(cls)
 
-        assert isinstance(id, str)
-
+        id = validate_key(id, keyname='Experiment ID')
         obj.id = id
 
         if cache is None:
@@ -126,19 +124,21 @@ class Experiment(object):
         cls._instance_cache[id] = obj
         return obj
 
-    def __init__(self, id, cache=None):
+    def __init__(self, id, cache=None, backend='local'):
         """
         Automatically load myself if cached pickle file exists
         """
-        cache_dir = self.cache_dir
-        serialize.maybe_create_dir('cache', cache_dir)
+        # DELETEME after full Redis support
+        self._local = init_backend(self._cache)
+        if backend == 'local':
+            backend = self._local
 
         path = self.get_autosave_path()
         if path.is_file():
             exp = serialize.load(path)
             self.__dict__.update(exp.__dict__)
 
-            # Create current Environment, and check the difference with
+            # Create current Environment, and check the difference from
             # pickled Environment
             env = Environment()
             env.check_diff(self._environment)
@@ -147,17 +147,19 @@ class Experiment(object):
             msg = 'Initialized new experiment: {}'
             logger.info(msg.format(path))
 
-            self._initialize()
+            self._initialize(backend=backend)
+
         # output environment info
         self._environment.describe()
+        self._save_environment()
 
     def __repr__(self):
         msg = 'Experiment(id: {}, trial_id: {})'
-        return msg.format(self.id, self._trial_id)
+        return msg.format(self.id, self.trial_id)
 
     @property
-    def cache_dir(self):
-        return pathlib.Path(self._cache)
+    def trial_id(self):
+        return self._trials.trial_id
 
     ##########################################################
     # Parameter
@@ -171,7 +173,7 @@ class Experiment(object):
 
     def get_parameters(self, trial_id):
         self._check_trial_id(trial_id)
-        return self._parameters_history[trial_id].to_dict()
+        return self._trials.load_parameters(trial_id)
 
     ##########################################################
     # Save / load myself
@@ -184,66 +186,45 @@ class Experiment(object):
         path = self.get_autosave_path()
         serialize.save(self, path)
 
-    def _initialize(self):
-        self._trial_id = 0
+    def _initialize(self, backend='local'):
 
+        self._backend = init_backend(backend)
         self._parameters = ParameterManager()
-        self._result = False
 
         # code management
         self._codes = CodeManager()
 
         # history management
-        self._parameters_history = {}
-        self._result_history = {}
+        # TODO: Add Trial Manager
+        from daskperiment.core.trial import LocalTrialManager
+        self._trials = LocalTrialManager()
 
+        self._metrics = self._backend.get_metricmanager()
         self._environment = Environment()
-        # TODO: move metrics management to sql
-        self._metrics = MetricManager()
 
     def _delete_cache(self):
         """
         Delete cache dir
         """
-        import shutil
-        shutil.rmtree(self.cache_dir)
+        self._local._delete_cache()
+        try:
+            self._backend._delete_cache()
+        except FileNotFoundError:
+            pass
 
     def get_autosave_path(self):
         """
         Get Path instance to save myself
         """
         fname = '{}.pkl'.format(self.id)
-        return self.cache_dir / fname
-
-    @property
-    def persist_dir(self):
-        if not hasattr(self, '_persist_dir'):
-            persist_dir = self.cache_dir / 'persist'
-            serialize.maybe_create_dir('persist', persist_dir)
-            self._persist_dir = persist_dir
-        return self._persist_dir
+        return self._local.cache_dir / fname
 
     def get_persist_path(self, step, trial_id):
         """
         Get Path instance to save persisted results
         """
         fname = '{}_{}_{}.pkl'.format(self.id, step, trial_id)
-        return self.persist_dir / fname
-
-    @property
-    def code_dir(self):
-        if not hasattr(self, '_code_dir'):
-            code_dir = self.cache_dir / 'code'
-            serialize.maybe_create_dir('code', code_dir)
-            self._code_dir = code_dir
-        return self._code_dir
-
-    def get_code_path(self, trial_id):
-        """
-        Get Path instance to save code
-        """
-        fname = '{}_{}.txt'.format(self.id, trial_id)
-        return self.code_dir / fname
+        return self._local.persist_dir / fname
 
     ##########################################################
     # Decorators
@@ -269,31 +250,13 @@ class Experiment(object):
     ##########################################################
 
     def _prepare_experiment_step(self):
-        # increment trial id before experiment start
-        self._trial_id += 1
-        self._start_time = pd.Timestamp.now()
-
-        msg = 'Started Experiment (trial id={})'
-        logger.info(msg.format(self._trial_id))
-
-        self._parameters_history[self._trial_id] = self._parameters.copy()
-
-        self._codes.save(self._trial_id, self.get_code_path(self._trial_id))
-
+        self._trials.start_trial(self._parameters)
+        self._save_code()
         self.check_executable()
 
     def _finish_experiment_step(self, result, success, description):
-        end_time = pd.Timestamp.now()
-        record = {'Result': result,
-                  'Success': success,
-                  'Finished': end_time,
-                  'Process Time': end_time - self._start_time,
-                  'Description': description}
-        self._result_history[self._trial_id] = record
-
-        msg = 'Finished Experiment (trial id={})'
-        logger.info(msg.format(self._trial_id))
-
+        self._trials.finish_trial(result=result, success=success,
+                                  description=description)
         self.save()
 
     def _check_trial_id(self, trial_id):
@@ -301,42 +264,23 @@ class Experiment(object):
             msg = 'Trial id must be integer, given: {}{}'
             msg.format(trial_id, type(trial_id))
             raise TrialIDNotFoundError(msg.format(trial_id, type(trial_id)))
-        if trial_id <= 0 or self._trial_id < trial_id:
+        if trial_id <= 0 or self.trial_id < trial_id:
             raise TrialIDNotFoundError(trial_id)
 
     def check_executable(self):
         """
         Check whether the current Experiment is executable.
 
-        * Result is defined
         * Parameters are all defined
         """
-        self._check_result_defined()
         self._parameters._check_all_defined()
-
-    def _check_result_defined(self):
-        if not self._result:
-            msg = ('Experiment result is not set. '
-                   'Use Experiment.result decorator to define it')
-            raise ParameterUndeclaredError(msg)
 
     ##########################################################
     # History management
     ##########################################################
 
     def get_history(self):
-        params = {k: v.to_dict() for k, v in self._parameters_history.items()}
-        parameters = pd.DataFrame.from_dict(params,
-                                            orient='index')
-        result_index = pd.Index(['Result', 'Success', 'Finished',
-                                 'Process Time', 'Description'])
-        # pandas 0.22 or earlier does't support columns kw
-        results = pd.DataFrame.from_dict(self._result_history,
-                                         orient='index')
-        results = results.reindex(columns=result_index)
-        results = parameters.join(results)
-        results.index.name = 'Trial ID'
-        return results
+        return self._trials.get_history()
 
     def get_persisted(self, step, trial_id):
         self._check_trial_id(trial_id)
@@ -348,25 +292,57 @@ class Experiment(object):
     # Code management
     ##########################################################
 
+    def _save_code(self):
+        key = self._backend.get_code_key(self.id, self.trial_id)
+        msg = 'Saving code context: {}'
+        logger.info(msg.format(key))
+
+        code_context = self._codes.describe()
+        header = '# Code output saved in trial_id={}'.format(self.trial_id)
+        code_context = header + os.linesep + code_context
+
+        self._backend.save_text(key, code_context)
+
     def get_code(self, trial_id=None):
         if trial_id is None:
             return self._codes.describe()
         else:
             self._check_trial_id(trial_id)
-            return self._codes.load(trial_id)
+            key = self._backend.get_code_key(self.id, trial_id)
+            code_context = self._backend.load_text(key)
+
+            # skip header
+            codes = code_context.splitlines()[1:]
+            return os.linesep.join(codes) + os.linesep
 
     ##########################################################
     # Metrics management
     ##########################################################
 
-    def save_metric(self, key, epoch, value):
-        self._metrics.save(key=key, trial_id=self._trial_id,
+    def save_metric(self, metric_key, epoch, value):
+        self._metrics.save(experiment_id=self.id, metric_key=metric_key,
+                           trial_id=self.trial_id,
                            epoch=epoch, value=value)
 
-    def load_metric(self, key, trial_id):
+    def load_metric(self, metric_key, trial_id):
         if not pd.api.types.is_list_like(trial_id):
             trial_id = [trial_id]
 
         for i in trial_id:
             self._check_trial_id(i)
-        return self._metrics.load(key=key, trial_id=trial_id)
+        return self._metrics.load(experiment_id=self.id,
+                                  metric_key=metric_key,
+                                  trial_id=trial_id)
+
+    ##########################################################
+    # Environment management
+    ##########################################################
+
+    def _save_environment(self):
+        """
+        Save Python package info with pip freeze format
+        """
+        fname = 'requirements_{}.txt'
+        fname = fname.format(pd.Timestamp.now().strftime('%Y%m%d%H%M%S%f'))
+        path = self._local.environment_dir / fname
+        self._environment.save_python_packages(path)

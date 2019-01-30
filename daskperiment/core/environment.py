@@ -1,3 +1,4 @@
+import os
 import pathlib
 import platform
 
@@ -92,9 +93,25 @@ Current {key}: {current}""".format(cap_key=key.title(), key=key,
     def maybe_file(self):
         return self.python_shell == 'File'
 
+    def _get_python_packages(self):
+        import pkg_resources
+        return pkg_resources.working_set
+
     def get_python_packages(self):
         """
         Lists installed python packages
         """
-        import pkg_resources
-        return [repr(p) for p in pkg_resources.working_set]
+        return [repr(p) for p in self._get_python_packages()]
+
+    def save_python_packages(self, path):
+        """
+        Save Python package info with pip freeze format
+        """
+        pkgs = self._get_pip_freeze()
+        msg = 'Saving Python package info: {}'
+        logger.info(msg.format(path))
+        path.write_text(os.linesep.join(pkgs))
+
+    def _get_pip_freeze(self):
+        return ["{}=={}".format(p.project_name, p.version)
+                for p in self._get_python_packages()]

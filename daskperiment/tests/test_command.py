@@ -27,7 +27,7 @@ class TestCommand(object):
                         reason='skip on Travis CI')
     def test_simple_experiment(self):
         e = daskperiment.Experiment('simple_experiment_pj')
-        assert e._trial_id == 0
+        assert e.trial_id == 0
 
         file = 'scripts/simple_experiment.py'
 
@@ -37,7 +37,7 @@ class TestCommand(object):
         assert p.returncode == 0
 
         e = daskperiment.Experiment('simple_experiment_pj')
-        assert e._trial_id == 1
+        assert e.trial_id == 1
 
         hist = e.get_history()
         exp = pd.DataFrame({'a': [1], 'b': [2], 'Result': [4]},

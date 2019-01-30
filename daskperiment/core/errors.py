@@ -2,14 +2,20 @@ class ParameterUndeclaredError(ValueError):
     """
     Parameter is not declared in the experiment space
     """
-    pass
+    def __init__(self, parameter_name):
+        msg = ('Parameter is not declared. '
+               'Use Experiment.parameter to declare: {}')
+        super().__init__(msg.format(parameter_name))
 
 
 class ParameterUndefinedError(ValueError):
     """
     Parameter is declared, but not initialized (has no value)
     """
-    pass
+    def __init__(self, parameter_name):
+        msg = ('Parameters are not defined. '
+               'Use Experiment.set_parameters to initialize: {}')
+        super().__init__(msg.format(parameter_name))
 
 
 class TrialIDNotFoundError(ValueError):
