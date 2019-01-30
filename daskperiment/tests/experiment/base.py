@@ -5,6 +5,7 @@ import pandas as pd
 import pandas.testing as tm
 
 import daskperiment
+from daskperiment.backend import LocalBackend
 from daskperiment.core.errors import TrialIDNotFoundError
 
 
@@ -16,15 +17,28 @@ def assert_history_equal(df, exp):
                           exp)
 
 
-class TestExperiment(object):
+class ExperimentBase(object):
+
+    backend = None
 
     def test_is(self):
-        ex1 = daskperiment.Experiment(id="test_parameter")
-        ex2 = daskperiment.Experiment(id="test_parameter")
+        ex1 = daskperiment.Experiment(id="test_parameter",
+                                      backend=self.backend)
+        ex2 = daskperiment.Experiment(id="test_parameter",
+                                      backend=self.backend)
         assert ex1 is ex2
 
+    def test_invalid_id(self):
+        msg = 'Experiment ID must be str, given:'
+        with pytest.raises(ValueError, match=msg):
+            daskperiment.Experiment(id=1, backend=self.backend)
+
+        msg = 'Experiment ID cannot contain colon '
+        with pytest.raises(ValueError, match=msg):
+            daskperiment.Experiment(id="aa:aa", backend=self.backend)
+
     def test_repr(self):
-        ex = daskperiment.Experiment(id="test_repr")
+        ex = daskperiment.Experiment(id="test_repr", backend=self.backend)
         assert repr(ex) == 'Experiment(id: test_repr, trial_id: 0)'
 
         a = ex.parameter('a')
@@ -41,8 +55,31 @@ class TestExperiment(object):
 
         ex._delete_cache()
 
+    def test_parameter_undeclared(self):
+        ex = daskperiment.Experiment(id="test_undeclared_param",
+                                     backend=self.backend)
+        with pytest.raises(daskperiment.core.errors.ParameterUndeclaredError,
+                           match='Parameter is not declared'):
+            ex.set_parameters(a=1)
+
+    def test_parameter_undefined(self):
+        ex = daskperiment.Experiment(id="test_undefined_param",
+                                     backend=self.backend)
+        a = ex.parameter('a')
+
+        @ex.result
+        def inc(a):
+            return a + 1
+
+        res = inc(a)
+
+        with pytest.raises(daskperiment.core.errors.ParameterUndefinedError,
+                           match='Parameters are not defined'):
+            res.compute()
+
     def test_compute(self):
-        ex = daskperiment.Experiment(id="test_parameter")
+        ex = daskperiment.Experiment(id="test_parameter",
+                                     backend=self.backend)
         a = ex.parameter("a")
 
         @ex.result
@@ -69,7 +106,7 @@ class TestExperiment(object):
         ex._delete_cache()
 
     def test_pattern(self):
-        ex = daskperiment.Experiment(id="test_pattern")
+        ex = daskperiment.Experiment(id="test_pattern", backend=self.backend)
         a = ex.parameter("a")
 
         def inc(a):
@@ -100,7 +137,7 @@ class TestExperiment(object):
         ex._delete_cache()
 
     def test_persist(self):
-        ex = daskperiment.Experiment(id="test_persist")
+        ex = daskperiment.Experiment(id="test_persist", backend=self.backend)
         a = ex.parameter("a")
 
         @ex.persist
@@ -134,7 +171,7 @@ class TestExperiment(object):
         ex._delete_cache()
 
     def test_failure(self):
-        ex = daskperiment.Experiment(id="test_failure")
+        ex = daskperiment.Experiment(id="test_failure", backend=self.backend)
         a = ex.parameter("a")
 
         @ex.result
@@ -166,7 +203,7 @@ class TestExperiment(object):
         ex._delete_cache()
 
     def test_dup_param(self):
-        ex = daskperiment.Experiment(id="test_dup_param")
+        ex = daskperiment.Experiment(id="test_dup_param", backend=self.backend)
         a = ex.parameter("a")
 
         @ex.result
@@ -185,7 +222,8 @@ class TestExperiment(object):
         ex._delete_cache()
 
     def test_invalid_trial_id(self):
-        ex = daskperiment.Experiment(id="test_invalid_trial")
+        ex = daskperiment.Experiment(id="test_invalid_trial",
+                                     backend=self.backend)
         a = ex.parameter("a")
 
         @ex.persist
@@ -217,9 +255,9 @@ class TestExperiment(object):
         ex._delete_cache()
 
     def test_autoload(self):
-        ex = daskperiment.Experiment(id="test_autoload")
+        ex = daskperiment.Experiment(id="test_autoload", backend=self.backend)
         a = ex.parameter("a")
-        trial_id = ex._trial_id
+        trial_id = ex.trial_id
 
         @ex.result
         def inc(a):
@@ -233,18 +271,18 @@ class TestExperiment(object):
         ex.set_parameters(a=3)
         assert res.compute() == 4
 
-        assert ex._trial_id == trial_id + 2
-        ex2 = daskperiment.Experiment(id="test_autoload")
+        assert ex.trial_id == trial_id + 2
+        ex2 = daskperiment.Experiment(id="test_autoload", backend=self.backend)
         assert ex is ex2
-        assert ex2._trial_id == trial_id + 2
+        assert ex2.trial_id == trial_id + 2
 
         # DO NOT DELETE CACHE to test auto-loaded instance
         # ex._delete_cache()
 
     def test_metric(self):
-        ex = daskperiment.Experiment(id="test_metric")
+        ex = daskperiment.Experiment(id="test_metric", backend=self.backend)
         a = ex.parameter('a')
-        assert ex._trial_id == 0
+        assert ex.trial_id == 0
 
         @ex.result
         def inc(a):
@@ -255,7 +293,7 @@ class TestExperiment(object):
         res = inc(a)
         ex.set_parameters(a=3)
         assert res.compute() == 4
-        assert ex._trial_id == 1
+        assert ex.trial_id == 1
 
         res = ex.load_metric('dummy_metric', trial_id=[1])
         exp_idx = pd.Index([1, 2], name='Epoch')
@@ -270,7 +308,7 @@ class TestExperiment(object):
 
         res = dummy()
         res.compute()
-        assert ex._trial_id == 2
+        assert ex.trial_id == 2
 
         res = ex.load_metric('dummy_metric2', trial_id=[2])
         exp_idx = pd.Index([1], name='Epoch')
@@ -281,7 +319,7 @@ class TestExperiment(object):
         res = inc(a)
         ex.set_parameters(a=4)
         assert res.compute() == 5
-        assert ex._trial_id == 3
+        assert ex.trial_id == 3
 
         res = ex.load_metric('dummy_metric', trial_id=[1, 3])
         exp_idx = pd.Index([1, 2], name='Epoch')
@@ -293,9 +331,10 @@ class TestExperiment(object):
         ex._delete_cache()
 
     def test_metric_invalid_trial_id(self):
-        ex = daskperiment.Experiment(id="test_metric_invalid")
+        ex = daskperiment.Experiment(id="test_metric_invalid",
+                                     backend=self.backend)
         a = ex.parameter('a')
-        assert ex._trial_id == 0
+        assert ex.trial_id == 0
 
         @ex.result
         def inc(a):
@@ -306,7 +345,7 @@ class TestExperiment(object):
         res = inc(a)
         ex.set_parameters(a=3)
         assert res.compute() == 4
-        assert ex._trial_id == 1
+        assert ex.trial_id == 1
 
         match = 'Unable to find trial id:'
         with pytest.raises(TrialIDNotFoundError, match=match):
@@ -321,7 +360,9 @@ class TestExperiment(object):
                            index=exp_idx, columns=exp_columns)
         tm.assert_frame_equal(res, exp)
 
-        with pytest.raises(ValueError, match='Unable to find saved metric:'):
+        with pytest.raises(ValueError,
+                           match=('Unable to find saved metric '
+                                  'with specified key:')):
             ex.load_metric('invalid_metric', trial_id=1)
 
         @ex.result
@@ -331,7 +372,7 @@ class TestExperiment(object):
         res = inc(a)
         ex.set_parameters(a=4)
         assert res.compute() == 5
-        assert ex._trial_id == 2
+        assert ex.trial_id == 2
 
         with pytest.raises(TrialIDNotFoundError, match=match):
             ex.load_metric('dummy_metric', trial_id=2)
@@ -339,7 +380,7 @@ class TestExperiment(object):
         ex._delete_cache()
 
     def test_code(self):
-        ex = daskperiment.Experiment(id="test_code")
+        ex = daskperiment.Experiment(id="test_code", backend=self.backend)
         a = ex.parameter("a")
 
         @ex
@@ -352,20 +393,24 @@ class TestExperiment(object):
 
         res = add(inc(a), a)
 
-        exp = """        @ex
-        def inc(a):
-            return a + 1
+        exp = """@ex
+def inc(a):
+    return a + 1
 
 
-        @ex.result
-        def add(a, b):
-            return a + b
+@ex.result
+def add(a, b):
+    return a + b
 """
         assert ex.get_code() == exp
 
         ex.set_parameters(a=3)
         assert res.compute() == 7
+        print(ex.get_code(trial_id=1))
         assert ex.get_code(trial_id=1) == exp
+
+        if isinstance(ex._backend, LocalBackend):
+            assert (ex._backend.code_dir / "test_code_1.py").is_file()
 
         match = 'Unable to find trial id:'
         with pytest.raises(TrialIDNotFoundError, match=match):
@@ -376,7 +421,8 @@ class TestExperiment(object):
         ex._delete_cache()
 
     def test_code_persist(self):
-        ex = daskperiment.Experiment(id="test_code_persist")
+        ex = daskperiment.Experiment(id="test_code_persist",
+                                     backend=self.backend)
         a = ex.parameter("a")
 
         @ex.persist
@@ -389,14 +435,14 @@ class TestExperiment(object):
 
         res = add(inc(a), a)
 
-        exp = """        @ex.persist
-        def inc(a):
-            return a + 1
+        exp = """@ex.persist
+def inc(a):
+    return a + 1
 
 
-        @ex.result
-        def add(a, b):
-            return a + b
+@ex.result
+def add(a, b):
+    return a + b
 """
         assert ex.get_code() == exp
 

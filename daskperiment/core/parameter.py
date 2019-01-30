@@ -45,14 +45,10 @@ class Parameter(Delayed):
         try:
             param = self._experiment._parameters[self._name]
             if isinstance(param, Undefined):
-                msg = ('Parameter is not defined. '
-                       'Use Experiment.set_parameters to initialize: {}')
-                raise ParameterUndefinedError(msg.format(self._name))
+                raise ParameterUndefinedError(self._name)
             return param
         except KeyError:
-            msg = ('Parameter is not declared. '
-                   'Use Experiment.parameter to declare: {}')
-            raise ParameterUndeclaredError(msg.format(self._name))
+            raise ParameterUndeclaredError(self._name)
 
 
 class ParameterManager(object):
@@ -79,8 +75,11 @@ class ParameterManager(object):
         return dict(self._parameters)
 
     def define(self, name):
+        """"
+        Declare parameter
+        """
         if name in self._parameters:
-            msg = ('Re-defining existing parameter: {}')
+            msg = 'Re-defining existing parameter: {}'
             logger.debug(msg.format(name))
         else:
             self._parameters[name] = Undefined()
@@ -89,8 +88,14 @@ class ParameterManager(object):
         return Parameter(self, name)
 
     def set(self, **kwargs):
+        """"
+        Define parameter (set parameter value)
+        """
         for name, value in kwargs.items():
-            self._parameters[name] = value
+            if name in self._parameters:
+                self._parameters[name] = value
+            else:
+                raise ParameterUndeclaredError(name)
 
         msg = 'Updated parameters: {}'
         logger.info(msg.format(self.describe()))
@@ -102,6 +107,4 @@ class ParameterManager(object):
                 undefined.append(k)
 
         if len(undefined) > 0:
-            msg = ('Parameters are not defined. '
-                   'Use Experiment.set_parameters to initialize: {}')
-            raise ParameterUndefinedError(msg.format(', '.join(undefined)))
+            raise ParameterUndefinedError(', '.join(undefined))
