@@ -1,10 +1,9 @@
-import json
-
 import pandas as pd
 
 from daskperiment.backend import RedisBackend
 from daskperiment.core.errors import TrialIDNotFoundError
 from daskperiment.core.metric.base import _MetricManager
+import daskperiment.io.json as json
 
 
 class RedisMetricManager(_MetricManager):

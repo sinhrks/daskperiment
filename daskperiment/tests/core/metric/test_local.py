@@ -5,7 +5,7 @@ import pandas.testing as tm
 
 from daskperiment.core.errors import TrialIDNotFoundError
 from daskperiment.core.metric.local import Metric
-from daskperiment.tests.metric.base import MetricManagerBase
+from .base import MetricManagerBase
 
 
 class TestLocalMetricManager(MetricManagerBase):

@@ -19,7 +19,9 @@ def assert_history_equal(df, exp):
 
 class ExperimentBase(object):
 
-    backend = None
+    @property
+    def backend(self):
+        raise NotImplementedError
 
     def test_is(self):
         ex1 = daskperiment.Experiment(id="test_parameter",
@@ -451,3 +453,25 @@ def add(a, b):
         assert ex.get_code(trial_id=1) == exp
 
         ex._delete_cache()
+
+    def test_python_package(self):
+        ex = daskperiment.Experiment(id="test_python_package",
+                                     backend=self.backend)
+        trial_id = ex.trial_id
+        print(trial_id)
+        a = ex.parameter("a")
+
+        @ex.result
+        def inc2(a):
+            return a + 2
+
+        res = inc2(a)
+
+        ex.set_parameters(a=3)
+        assert res.compute() == 5
+
+        res = ex.get_python_packages()
+        assert any(r.startswith('pandas==') for r in res.splitlines()), res
+
+        res2 = ex.get_python_packages(trial_id + 1)
+        assert res == res2

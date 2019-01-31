@@ -10,14 +10,9 @@ from daskperiment.core.environment import Environment
 
 class TestEnvironment(object):
 
-    def test_python_packages(self):
-        e = Environment()
-        res = e.get_python_packages()
-        assert any(r.startswith('pandas') for r in res)
-
     def test_pip_packages(self):
         e = Environment()
-        res = e._get_pip_freeze()
+        res = e.get_python_packages()
         assert any(r.startswith('pandas==') for r in res)
 
 

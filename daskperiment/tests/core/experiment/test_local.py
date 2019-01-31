@@ -1,4 +1,4 @@
-from daskperiment.tests.experiment.base import ExperimentBase
+from .base import ExperimentBase
 
 
 class TestLocalExperiment(ExperimentBase):

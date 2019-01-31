@@ -1,12 +1,6 @@
 import pandas as pd
 
-from daskperiment.backend.base import init_backend
 from daskperiment.util.text import validate_key
-
-
-def init_metricmanager(protocol):
-    backend = init_backend(protocol)
-    return backend.get_metricmanager()
 
 
 class _MetricManager(object):

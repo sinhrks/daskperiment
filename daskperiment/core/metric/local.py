@@ -1,5 +1,3 @@
-import pathlib
-
 import pandas as pd
 
 from daskperiment.core.errors import TrialIDNotFoundError
@@ -8,8 +6,7 @@ from daskperiment.core.metric.base import _MetricManager
 
 class LocalMetricManager(_MetricManager):
 
-    def __init__(self, type):
-        assert isinstance(type, pathlib.Path) or type == 'local'
+    def __init__(self, backend):
         self.metrics = {}
 
     def _save(self, experiment_id, metric_key, trial_id, epoch, value):
