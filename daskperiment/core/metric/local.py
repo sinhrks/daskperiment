@@ -7,14 +7,15 @@ from daskperiment.core.metric.base import _MetricManager
 class LocalMetricManager(_MetricManager):
 
     def __init__(self, backend):
+        super().__init__(backend)
         self.metrics = {}
 
-    def _save(self, experiment_id, metric_key, trial_id, epoch, value):
+    def _save(self, metric_key, trial_id, epoch, value):
         if metric_key not in self.metrics:
             self.metrics[metric_key] = Metric(metric_key)
         self.metrics[metric_key].save(trial_id, epoch, value)
 
-    def _load_single(self, experiment_id, metric_key, trial_id):
+    def _load_single(self, metric_key, trial_id):
         try:
             return self.metrics[metric_key]._load_single(trial_id)
         except KeyError:

@@ -2,6 +2,8 @@ import os
 import pathlib
 import platform
 
+from daskperiment.backend import init_backend
+from daskperiment.core.errors import TrialIDNotFoundError
 from daskperiment.util.diff import unified_diff
 from daskperiment.util.log import get_logger
 
@@ -10,7 +12,9 @@ logger = get_logger(__name__)
 
 class Environment(object):
 
-    def __init__(self):
+    def __init__(self, backend):
+        self.backend = init_backend(backend=backend)
+
         self.platform_info = platform.platform()
         self.python_info = "{} {}".format(platform.python_implementation(),
                                           platform.python_version())
@@ -88,3 +92,39 @@ class Environment(object):
         """
         return ["{}=={}".format(p.project_name, p.version)
                 for p in self._get_python_packages()]
+
+    def save(self, trial_id):
+        self.save_device_info(trial_id)
+        self.save_python_packages(trial_id)
+
+    def save_device_info(self, trial_id):
+        key = self.backend.get_device_info_key(trial_id)
+        msg = 'Saving device info: {}'
+        logger.info(msg.format(key))
+
+        text = os.linesep.join(self.get_device_info())
+        self.backend.save_text(key, text)
+
+    def load_device_info(self, trial_id):
+        key = self.backend.get_device_info_key(trial_id)
+        try:
+            return self.backend.load_text(key)
+        except TrialIDNotFoundError:
+            # overwrite message using trial_id
+            raise TrialIDNotFoundError(trial_id)
+
+    def save_python_packages(self, trial_id):
+        key = self.backend.get_python_package_key(trial_id)
+        msg = 'Saving python packages: {}'
+        logger.info(msg.format(key))
+
+        text = os.linesep.join(self.get_python_packages())
+        self.backend.save_text(key, text)
+
+    def load_python_packages(self, trial_id):
+        key = self.backend.get_python_package_key(trial_id)
+        try:
+            return self.backend.load_text(key)
+        except TrialIDNotFoundError:
+            # overwrite message using trial_id
+            raise TrialIDNotFoundError(trial_id)

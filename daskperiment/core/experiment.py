@@ -61,6 +61,9 @@ class Result(Delayed):
         logger.info('Target: {}'.format(self._key))
 
         try:
+            # save may raise errors
+            exp._save_experiment_step()
+
             result = super().compute(**kwargs)
             exp._finish_experiment_step(result=result, success=True,
                                         description=np.nan)
@@ -88,10 +91,7 @@ def persist_result(experiment, func):
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        # token = tokenize(func, *args, **kwargs)
-
         result = func(*args, **kwargs)
-
         experiment._save_persist(func.__name__, result)
         return result
 
@@ -118,25 +118,22 @@ class Experiment(object):
         """
         Automatically load myself if cached pickle file exists
         """
-        if backend == 'local':
-            # LocalBackend
-            dname = '{}'.format(id)
-            from daskperiment.config import _CACHE_DIR
-            backend = _CACHE_DIR / dname
-
-        self._backend = init_backend(self.id, backend)
+        self._backend = init_backend(experiment_id=self.id,
+                                     backend=backend)
         self._backend = self._backend.load(self.id)
 
         if self.trial_id != 0:
-            msg = 'Loaded experiment: {}'
+            msg = 'Loaded existing experiment: {}'
             logger.info(msg.format(self))
         else:
             msg = 'Initialized new experiment: {}'
             logger.info(msg.format(self))
 
         self._parameters = ParameterManager()
-        self._codes = CodeManager()
-        self._environment = Environment()
+        self._codes = CodeManager(backend=self._backend)
+        self._environment = Environment(backend=self._backend)
+
+        # TODO: check code change
 
         # output environment info
         self._environment.log_environment_info()
@@ -209,10 +206,18 @@ class Experiment(object):
     ##########################################################
 
     def _prepare_experiment_step(self):
-        self._trials.start_trial(self._parameters)
-        self._save_code()
-        self._save_environment()
+        # when myself is not executable, immediately raise
+        # (do not store history)
         self.check_executable()
+
+        # TODO: rethinking order
+        self._trials.start_trial()
+
+    def _save_experiment_step(self):
+        trial_id = self._trials.current_trial_id
+        self._trials.save_parameters(self._parameters)
+        self._codes.save(trial_id)
+        self._environment.save(trial_id)
 
     def _finish_experiment_step(self, result, success, description):
         self._trials.finish_trial(result=result, success=success,
@@ -244,42 +249,25 @@ class Experiment(object):
 
     def _save_persist(self, step, result):
         trial_id = self._trials.current_trial_id
-        key = self._backend.get_persist_key(self.id, step, trial_id)
+        key = self._backend.get_persist_key(step, trial_id)
         self._backend.save_object(key, result)
 
     def get_persisted(self, step, trial_id):
         self._check_trial_id(trial_id)
 
-        key = self._backend.get_persist_key(self.id, step, trial_id)
+        key = self._backend.get_persist_key(step, trial_id)
         return self._backend.load_object(key)
 
     ##########################################################
     # Code management
     ##########################################################
 
-    def _save_code(self):
-        trial_id = self._trials.current_trial_id
-        key = self._backend.get_code_key(self.id, trial_id)
-        msg = 'Saving code context: {}'
-        logger.info(msg.format(key))
-
-        code_context = self._codes.describe()
-        header = '# Code output saved in trial_id={}'.format(trial_id)
-        code_context = header + os.linesep + code_context
-
-        self._backend.save_text(key, code_context)
-
     def get_code(self, trial_id=None):
         if trial_id is None:
             return self._codes.describe()
         else:
             self._check_trial_id(trial_id)
-            key = self._backend.get_code_key(self.id, trial_id)
-            code_context = self._backend.load_text(key)
-
-            # skip header
-            codes = code_context.splitlines()[1:]
-            return os.linesep.join(codes) + os.linesep
+            return self._codes.load(trial_id)
 
     ##########################################################
     # Metrics management
@@ -287,8 +275,8 @@ class Experiment(object):
 
     def save_metric(self, metric_key, epoch, value):
         trial_id = self._trials.current_trial_id
-        self._metrics.save(experiment_id=self.id, metric_key=metric_key,
-                           trial_id=trial_id, epoch=epoch, value=value)
+        self._metrics.save(metric_key=metric_key, trial_id=trial_id,
+                           epoch=epoch, value=value)
 
     def load_metric(self, metric_key, trial_id):
         if not pd.api.types.is_list_like(trial_id):
@@ -296,8 +284,7 @@ class Experiment(object):
 
         for i in trial_id:
             self._check_trial_id(i)
-        return self._metrics.load(experiment_id=self.id,
-                                  metric_key=metric_key,
+        return self._metrics.load(metric_key=metric_key,
                                   trial_id=trial_id)
 
     ##########################################################
@@ -313,43 +300,13 @@ class Experiment(object):
             previous = self.get_python_packages(trial_id)
             self._environment.check_python_packages_change(previous)
 
-    def _save_environment(self):
-        """
-        Save Python package info with pip freeze format
-        """
-        trial_id = self._trials.current_trial_id
-        self._save_device_info(trial_id)
-        self._save_python_package(trial_id)
-
-    def _save_device_info(self, trial_id, info=True):
-        key = self._backend.get_device_info_key(self.id, trial_id)
-        if info:
-            msg = 'Saving device info: {}'
-            logger.info(msg.format(key))
-
-        text = os.linesep.join(self._environment.get_device_info())
-        self._backend.save_text(key, text)
-
     def get_environment(self, trial_id=None):
         if trial_id is None:
             text = os.linesep.join(self._environment.get_device_info())
             return text
         else:
             self._check_trial_id(trial_id)
-            key = self._backend.get_device_info_key(self.id, trial_id)
-            try:
-                return self._backend.load_text(key)
-            except TrialIDNotFoundError:
-                # overwrite message using trial_id
-                raise TrialIDNotFoundError(trial_id)
-
-    def _save_python_package(self, trial_id):
-        key = self._backend.get_python_package_key(self.id, trial_id)
-        msg = 'Saving python packages: {}'
-        logger.info(msg.format(key))
-
-        text = os.linesep.join(self._environment.get_python_packages())
-        self._backend.save_text(key, text)
+            return self._environment.load_device_info(trial_id)
 
     def get_python_packages(self, trial_id=None):
         if trial_id is None:
@@ -357,9 +314,4 @@ class Experiment(object):
             return text
         else:
             self._check_trial_id(trial_id)
-            key = self._backend.get_python_package_key(self.id, trial_id)
-            try:
-                return self._backend.load_text(key)
-            except TrialIDNotFoundError:
-                # overwrite message using trial_id
-                raise TrialIDNotFoundError(trial_id)
+            return self._environment.load_python_packages(trial_id)
