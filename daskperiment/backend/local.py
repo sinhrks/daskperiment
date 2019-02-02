@@ -31,6 +31,18 @@ class LocalBackend(_BaseBackend):
                                 info=False)
         pickle.maybe_create_dir('persist', self.persist_dir, info=False)
 
+    def __repr__(self):
+        return "LocalBackend('{}')".format(self.cache_dir)
+
+    def __eq__(self, other):
+        if not isinstance(other, LocalBackend):
+            return False
+        if self.experiment_id != other.experiment_id:
+            return False
+        if self.cache_dir != other.cache_dir:
+            return False
+        return True
+
     @property
     def code_dir(self):
         return self.cache_dir / 'code'
@@ -99,16 +111,30 @@ class LocalBackend(_BaseBackend):
         except FileNotFoundError:
             raise TrialIDNotFoundError(key)
 
-    def save(self, experiment_id):
-        fname = '{}.pkl'.format(experiment_id)
+    def save(self):
+        """
+        Save myself to specified location.
+
+        LocalBackend pickles myself to the path defined by experiment_id
+        """
+        fname = '{}.pkl'.format(self.experiment_id)
         path = self.cache_dir / fname
+        msg = 'Saving Experiment to file: {}'
+        logger.info(msg.format(path))
         pickle.save(self, path)
         return self
 
-    def load(self, experiment_id):
-        fname = '{}.pkl'.format(experiment_id)
+    def load(self):
+        """
+        Load myself from specified location.
+
+        LocalBackend pickles myself to the path defined by experiment_id
+        """
+        fname = '{}.pkl'.format(self.experiment_id)
         path = self.cache_dir / fname
         if path.is_file():
+            msg = 'Loading Experiment from file: {}'
+            logger.info(msg.format(path))
             return pickle.load(path)
         else:
             return self

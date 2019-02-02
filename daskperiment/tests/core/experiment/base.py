@@ -10,9 +10,9 @@ from daskperiment.core.errors import TrialIDNotFoundError
 
 
 def assert_history_equal(df, exp):
-    tm.assert_index_equal(df.columns[-5:],
-                          pd.Index(['Result', 'Success', 'Finished',
-                                    'Process Time', 'Description']))
+    exp_index = ['Result', 'Result Type', 'Success', 'Finished',
+                 'Process Time', 'Description']
+    tm.assert_index_equal(df.columns[-6:], pd.Index(exp_index))
     tm.assert_frame_equal(df.drop(['Finished', 'Process Time'], axis=1),
                           exp)
 
@@ -41,7 +41,9 @@ class ExperimentBase(object):
 
     def test_repr(self):
         ex = daskperiment.Experiment(id="test_repr", backend=self.backend)
-        assert repr(ex) == 'Experiment(id: test_repr, trial_id: 0)'
+        fmt = 'Experiment(id: test_repr, trial_id: {}, backend: {})'
+
+        assert repr(ex) == fmt.format(0, ex._backend), repr(ex)
 
         a = ex.parameter('a')
 
@@ -53,7 +55,7 @@ class ExperimentBase(object):
         ex.set_parameters(a=1)
         assert res.compute() == 2
 
-        assert repr(ex) == 'Experiment(id: test_repr, trial_id: 1)'
+        assert repr(ex) == fmt.format(1, ex._backend)
 
         ex._delete_cache()
 
@@ -63,6 +65,8 @@ class ExperimentBase(object):
         with pytest.raises(daskperiment.core.errors.ParameterUndeclaredError,
                            match='Parameter is not declared'):
             ex.set_parameters(a=1)
+
+        ex._delete_cache()
 
     def test_parameter_undefined(self):
         ex = daskperiment.Experiment(id="test_undefined_param",
@@ -78,6 +82,8 @@ class ExperimentBase(object):
         with pytest.raises(daskperiment.core.errors.ParameterUndefinedError,
                            match='Parameters are not defined'):
             res.compute()
+
+        ex._delete_cache()
 
     def test_compute(self):
         ex = daskperiment.Experiment(id="test_parameter",
@@ -99,10 +105,12 @@ class ExperimentBase(object):
         hist = ex.get_history()
         exp = pd.DataFrame({'a': [1, 3],
                             'Result': [2, 4],
+                            'Result Type': ["<class 'int'>"] * 2,
                             'Success': [True, True],
                             'Description': [np.nan, np.nan]},
                            index=pd.Index([1, 2], name='Trial ID'),
-                           columns=['a', 'Result', 'Success', 'Description'])
+                           columns=['a', 'Result', 'Result Type',
+                                    'Success', 'Description'])
         assert_history_equal(hist, exp)
 
         ex._delete_cache()
@@ -130,10 +138,12 @@ class ExperimentBase(object):
         hist = ex.get_history()
         exp = pd.DataFrame({'a': [1, 3],
                             'Result': [6, 10],
+                            'Result Type': ["<class 'int'>"] * 2,
                             'Success': [True, True],
                             'Description': [np.nan, np.nan]},
                            index=pd.Index([1, 2], name='Trial ID'),
-                           columns=['a', 'Result', 'Success', 'Description'])
+                           columns=['a', 'Result', 'Result Type',
+                                    'Success', 'Description'])
         assert_history_equal(hist, exp)
 
         ex._delete_cache()
@@ -164,10 +174,12 @@ class ExperimentBase(object):
         hist = ex.get_history()
         exp = pd.DataFrame({'a': [1, 3],
                             'Result': [3, 7],
+                            'Result Type': ["<class 'int'>"] * 2,
                             'Success': [True, True],
                             'Description': [np.nan, np.nan]},
                            index=pd.Index([1, 2], name='Trial ID'),
-                           columns=['a', 'Result', 'Success', 'Description'])
+                           columns=['a', 'Result', 'Result Type',
+                                    'Success', 'Description'])
         assert_history_equal(hist, exp)
 
         ex._delete_cache()
@@ -184,22 +196,35 @@ class ExperimentBase(object):
 
         ex.set_parameters(a=1)
         assert res.compute() == 3
+        assert ex.get_parameters() == dict(a=1)
 
         ex.set_parameters(a=2)
         assert res.compute() == 1.5
+        assert ex.get_parameters() == dict(a=2)
+        assert ex.get_parameters(1) == dict(a=1)
+        assert ex.get_parameters(2) == dict(a=2)
 
         ex.set_parameters(a=0)
         with pytest.raises(ZeroDivisionError):
             res.compute()
+        assert ex.get_parameters() == dict(a=0)
+        assert ex.get_parameters(1) == dict(a=1)
+        assert ex.get_parameters(2) == dict(a=2)
+        assert ex.get_parameters(1) == dict(a=1)
+        assert ex.get_parameters(3) == dict(a=0)
 
         hist = ex.get_history()
         exp_err = 'ZeroDivisionError(division by zero)'
         exp = pd.DataFrame({'a': [1, 2, 0],
                             'Result': [3.0, 1.5, np.nan],
+                            'Result Type': ["<class 'float'>",
+                                            "<class 'float'>",
+                                            "None"],
                             'Success': [True, True, False],
                             'Description': [np.nan, np.nan, exp_err]},
                            index=pd.Index([1, 2, 3], name='Trial ID'),
-                           columns=['a', 'Result', 'Success', 'Description'])
+                           columns=['a', 'Result', 'Result Type',
+                                    'Success', 'Description'])
         assert_history_equal(hist, exp)
 
         ex._delete_cache()
@@ -408,7 +433,7 @@ def add(a, b):
 
         ex.set_parameters(a=3)
         assert res.compute() == 7
-        print(ex.get_code(trial_id=1))
+
         assert ex.get_code(trial_id=1) == exp
 
         if isinstance(ex._backend, LocalBackend):
@@ -454,11 +479,10 @@ def add(a, b):
 
         ex._delete_cache()
 
-    def test_python_package(self):
-        ex = daskperiment.Experiment(id="test_python_package",
+    def test_environment(self):
+        ex = daskperiment.Experiment(id="test_environment",
                                      backend=self.backend)
         trial_id = ex.trial_id
-        print(trial_id)
         a = ex.parameter("a")
 
         @ex.result
@@ -470,8 +494,15 @@ def add(a, b):
         ex.set_parameters(a=3)
         assert res.compute() == 5
 
-        res = ex.get_python_packages()
-        assert any(r.startswith('pandas==') for r in res.splitlines()), res
+        env = ex.get_environment()
+        print(res)
+        assert env.splitlines()[1].startswith('Python: CPython')
 
-        res2 = ex.get_python_packages(trial_id + 1)
-        assert res == res2
+        env2 = ex.get_environment(trial_id + 1)
+        assert env == env2
+
+        pkg = ex.get_python_packages()
+        assert any(r.startswith('pandas==') for r in pkg.splitlines()), pkg
+
+        pkg2 = ex.get_python_packages(trial_id + 1)
+        assert pkg == pkg2

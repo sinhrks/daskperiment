@@ -14,6 +14,10 @@ class TrialResult(object):
     def __init__(self, result, success, finished,
                  process_time, description):
         self.result = result
+        if result is None:
+            self.result_type = 'None'
+        else:
+            self.result_type = repr(type(result))
         self.success = success
         self.finished = finished
         self.process_time = process_time
@@ -28,6 +32,7 @@ class TrialResult(object):
 
     def to_dict(self):
         record = {'Result': self.result,
+                  'Result Type': self.result_type,
                   'Success': self.success,
                   'Finished': self.finished,
                   'Process Time': self.process_time,
@@ -120,8 +125,9 @@ class _TrialManager(object):
 
         parameters = pd.DataFrame.from_dict(params,
                                             orient='index')
-        result_index = pd.Index(['Result', 'Success', 'Finished',
-                                 'Process Time', 'Description'])
+        result_index = ['Result', 'Result Type', 'Success', 'Finished',
+                        'Process Time', 'Description']
+        result_index = pd.Index(result_index, name='Trial ID')
         # pandas 0.22 or earlier does't support columns kw
         results = pd.DataFrame.from_dict(history,
                                          orient='index')
