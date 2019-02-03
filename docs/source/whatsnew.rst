@@ -12,11 +12,11 @@ Enhancement
 * Parameter now supports default value
 * (Experimental) Minimal dashboard
 
-
 Bug fix
 ^^^^^^^
 
 * `Experiment.get_history` with no parameters results in empty `DataFrame`.
+* Unable to change log level and its handler one time.
 
 v0.2.0
 ------
