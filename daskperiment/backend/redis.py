@@ -11,7 +11,29 @@ class RedisBackend(_BaseBackend):
 
     def __init__(self, experiment_id, uri):
         super().__init__(experiment_id)
+
+        import redis
+
+        if isinstance(uri, redis.ConnectionPool):
+            self._pool = uri
+
+            # TODO: properly build uri from ConnectionPool
+            # distinguish protocol from Pool
+            uri = 'redis://{host}:{port}/{db}'.format(**uri.connection_kwargs)
+
         self.uri = uri
+
+    def __repr__(self):
+        return "RedisBackend('{}')".format(self.uri)
+
+    def __eq__(self, other):
+        if not isinstance(other, RedisBackend):
+            return False
+        if self.experiment_id != other.experiment_id:
+            return False
+        if self.uri != other.uri:
+            return False
+        return True
 
     def __getstate__(self):
         state = {}
@@ -21,11 +43,17 @@ class RedisBackend(_BaseBackend):
         return state
 
     @property
+    def pool(self):
+        if not hasattr(self, '_pool'):
+            import redis
+            self._pool = redis.ConnectionPool.from_url(self.uri)
+        return self._pool
+
+    @property
     def client(self):
         if not hasattr(self, '_client'):
             import redis
-            pool = redis.ConnectionPool.from_url(self.uri)
-            self._client = redis.StrictRedis(connection_pool=pool,
+            self._client = redis.StrictRedis(connection_pool=self.pool,
                                              charset="utf-8",
                                              decode_responses=True)
         return self._client

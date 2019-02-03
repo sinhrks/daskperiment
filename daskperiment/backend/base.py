@@ -7,6 +7,20 @@ logger = get_logger(__name__)
 
 
 def init_backend(experiment_id=None, backend=None):
+    """
+    Initialize backend from Experiment ID and protocol.
+
+    Prameters
+    ---------
+    experiment_id: str
+       Experiment id
+    backend: str
+       Backend identifier
+
+    Returns
+    -------
+    Backend: backend
+    """
     if issubclass(type(backend), _BaseBackend):
         return backend
 
@@ -33,7 +47,25 @@ def init_backend(experiment_id=None, backend=None):
 
 
 def maybe_redis(uri):
-    if not isinstance(uri, str):
+    """
+    Check whether arg should be regarded as Redis
+
+    Prameters
+    ---------
+    uri: obj
+       Argument to be distinguished
+
+    Returns
+    -------
+    bool: maybe_redis
+    """
+    try:
+        import redis
+    except ImportError:
+        return False
+    if isinstance(uri, redis.ConnectionPool):
+        return True
+    elif not isinstance(uri, str):
         return False
     protocols = ['redis://', 'rediss://', 'unix://']
     return any(uri.startswith(p) for p in protocols)
@@ -44,16 +76,22 @@ class _BaseBackend(object):
     def __init__(self, experiment_id):
         self.experiment_id = experiment_id
 
-    def save(self, experiment_id):
+    def save(self):
         """
-        Save myself
+        Save myself to specified location.
+
+        Dababase-like backends do nothing because internal status are
+        all saved during other operations.
         """
         # overridden in LocalBackend
         # other backends should be stateless
         return self
 
-    def load(self, experiment_id):
+    def load(self):
         """
-        Load myself
+        Load myself from specified location.
+
+        Dababase-like backends do nothing because internal status are
+        all saved during other operations.
         """
         return self
