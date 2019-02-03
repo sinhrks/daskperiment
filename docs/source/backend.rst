@@ -24,8 +24,8 @@ LocalBackend
 
    >>> import daskperiment
    >>> daskperiment.Experiment('local_default_backend')
-   2019-02-03 XX:XX:XX,XXX [daskperiment.io.pickle] [INFO] Creating new cache directory: /Users/sinhrks/Git/daskperiment/daskperiment_cache/local_default_backend
-   2019-02-03 XX:XX:XX,XXX [daskperiment.core.experiment] [INFO] Initialized new experiment: Experiment(id: local_default_backend, trial_id: 0, backend: LocalBackend('daskperiment_cache/local_default_backend'))
+   ... [INFO] Creating new cache directory: /Users/sinhrks/Git/daskperiment/daskperiment_cache/local_default_backend
+   ... [INFO] Initialized new experiment: Experiment(id: local_default_backend, trial_id: 0, backend: LocalBackend('daskperiment_cache/local_default_backend'))
    ...
    Experiment(id: local_default_backend, trial_id: 0, backend: LocalBackend('daskperiment_cache/local_default_backend'))
 
@@ -35,8 +35,8 @@ To change the directory location, passing `pathlib.Path` instance as `backend` m
 
    >>> import pathlib
    >>> daskperiment.Experiment('local_custom_backend', backend=pathlib.Path('my_dir'))
-   2019-02-03 XX:XX:XX,XXX [daskperiment.io.pickle] [INFO] Creating new cache directory: /Users/sinhrks/Git/daskperiment/my_dir
-   2019-02-03 XX:XX:XX,XXX [daskperiment.core.experiment] [INFO] Initialized new experiment: Experiment(id: local_custom_backend, trial_id: 0, backend: LocalBackend('my_dir'))
+   ... [INFO] Creating new cache directory: /Users/sinhrks/Git/daskperiment/my_dir
+   ... [INFO] Initialized new experiment: Experiment(id: local_custom_backend, trial_id: 0, backend: LocalBackend('my_dir'))
    ...
    Experiment(id: local_custom_backend, trial_id: 0, backend: LocalBackend('my_dir'))
 
@@ -64,7 +64,7 @@ RedisBackend
 .. code-block:: python
 
    >>> daskperiment.Experiment('redis_uri_backend', backend='redis://localhost:6379/0')
-   2019-02-03 XX:XX:XX,XXX [daskperiment.core.experiment] [INFO] Initialized new experiment: Experiment(id: redis_uri_backend, trial_id: 0, backend: RedisBackend('redis://localhost:6379/0'))
+   ... [INFO] Initialized new experiment: Experiment(id: redis_uri_backend, trial_id: 0, backend: RedisBackend('redis://localhost:6379/0'))
    ...
    Experiment(id: redis_uri_backend, trial_id: 0, backend: RedisBackend('redis://localhost:6379/0'))
 
@@ -73,7 +73,7 @@ Or, you can use `redis.ConnectionPool`.
    >>> import redis
    >>> pool = redis.ConnectionPool.from_uri('redis://localhost:6379/0')
    >>> daskperiment.Experiment('redis_pool_backend', backend=pool)
-   2019-02-03 XX:XX:XX,XXX [daskperiment.core.experiment] [INFO] Initialized new experiment: Experiment(id: redis_pool_backend, trial_id: 0, backend: RedisBackend('redis://localhost:6379/0'))
+   ... [INFO] Initialized new experiment: Experiment(id: redis_pool_backend, trial_id: 0, backend: RedisBackend('redis://localhost:6379/0'))
    ...
    Experiment(id: redis_pool_backend, trial_id: 0, backend: RedisBackend('redis://localhost:6379/0'))
 
