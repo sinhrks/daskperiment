@@ -111,16 +111,13 @@ After some trials, you can retrieve parameter values specifying trial id.
 .. code-block:: python
 
    >>> ex.get_history()
-             a  b  Result    Result Type  Success                   Finished  \
-   Trial ID
-   1         1  2       4  <class 'int'>     True 2019-02-03 XX:XX:XX.XXXXXX
-   2         3  2       6  <class 'int'>     True 2019-02-03 XX:XX:XX.XXXXXX
+      a  b    Result      Result Type  Success                   Finished  \
+   1  1  2  3.333333  <class 'float'>     True 2019-02-03 XX:XX:XX.XXXXXX
+   2  1  3  2.500000  <class 'float'>     True 2019-02-03 XX:XX:XX.XXXXXX
 
-               Process Time  Description
-   Trial ID
-   1        00:00:00.008514          NaN
-   2        00:00:00.005247          NaN
-
+        Process Time  Description
+   1 00:00:00.014183          NaN
+   2 00:00:00.012354          NaN
 
 When any error occurs during the trial, Experiment instance stores the log as failed trial. The "Description" column contains the error detail.
 

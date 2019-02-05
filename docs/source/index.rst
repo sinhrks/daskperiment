@@ -34,6 +34,7 @@ It can be used in both Jupyter and command line (and also in standard Python int
   - Installed package and its version
 
 - Tracking code context.
+- Reproducibility check (function purity check).
 - Auto saving and loading previous experiment history.
 - Parallel execution of experiment steps.
 - Sharing experiments.
