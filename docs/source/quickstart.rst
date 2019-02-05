@@ -1,8 +1,15 @@
 Quickstart
 ==========
 
-`daskperiment` is a lightweight tool to perform reproducible machine learning
-experiment using `Dask`. It can be used in both Jupyter and command line (and also in standard Python interpreter). The benefits of daskperiemnt are:
+`daskperiment` is a tool to perform reproducible machine learning experiment.
+It allows users to define and manage the history of trials
+(given parameters, results and execution environment).
+
+The package is built on `Dask`, a package for parallel computing with task
+scheduling. Each experiment trial is internally expressed as `Dask` computation
+graph, and can be executed in parallel.
+
+It can be used in both Jupyter and command line (and also in standard Python interpreter). The benefits of daskperiemnt are:
 
 - User-intuitive.
 
@@ -99,6 +106,9 @@ Parameters are recommended to be a scalar (or lightweight value) because these a
 .. code-block:: python
 
    >>> s.compute()
+   ... [INFO] Started Experiment (trial id=1)
+   ...
+   ... [INFO] Finished Experiment (trial id=1)
    ...
    3.3333333333333335
 
@@ -110,6 +120,10 @@ You can update any parameters for next trial. Every trials can be distinguished 
 
    >>> ex.set_parameters(b=3)
    >>> s.compute()
+   ...
+   ... [INFO] Started Experiment (trial id=2)
+   ...
+   ... [INFO] Finished Experiment (trial id=2)
    ...
    2.5
 
@@ -149,6 +163,7 @@ When any error occurs during the trial, Experiment instance stores the log as fa
 
    >>> ex.set_parameters(a=1, b=-1)
    >>> s.compute()
+   ...
    ZeroDivisionError: division by zero
 
    >>> ex.get_history()
@@ -180,6 +195,13 @@ Note that an intermediate result is saved as a pickle file named with its functi
 
    >>> d = prepare_data(a, b)
    >>> s = calculate_score(d)
+   ... [WARNING] Code context has been changed: prepare_data
+   ... [WARNING] @@ -1,3 +1,3 @@
+   ... [WARNING] -@ex
+   ... [WARNING] +@ex.persist
+   ... [WARNING]  def prepare_data(a, b):
+   ... [WARNING]      return a + b
+
    ...
 
 .. note::
@@ -195,10 +217,14 @@ Let's perform some trials.
    >>> ex.set_parameters(a=1, b=2)
    >>> s.compute()
    ...
+   ... [INFO] Finished Experiment (trial id=4)
+   ...
    3.3333333333333335
 
    >>> ex.set_parameters(a=3, b=2)
    >>> s.compute()
+   ...
+   ... [INFO] Finished Experiment (trial id=5)
    ...
    2.0
 
@@ -237,6 +263,9 @@ You may need to monitor transition of some metrics during each trial. In each ex
 
    >>> ex.set_parameters(a=1, b=2)
    >>> s.compute()
+   ...
+   ... [INFO] Finished Experiment (trial id=6)
+   ...
    3.3333333333333335
 
 
@@ -260,6 +289,9 @@ Perform another trial.
 
    >>> ex.set_parameters(a=3, b=4)
    >>> s.compute()
+   ...
+   ... [INFO] Finished Experiment (trial id=7)
+   ...
    1.4285714285714286
 
 

@@ -4,10 +4,10 @@ Backend
 `daskperiment` uses `Backend` classes to define how and where experiment results are saved. Currently, following backends are supported.
 
 * `LocalBackend`: Information is stored in local files. This is for personal
-  usage with single PC. This backend doesn't intends to share information with
+  usage with single PC. This backend doesn't intend to share information with
   others and move file(s) to another PC.
-* `RedisBackend`: Information is stored in redis. If you setup redis-server,
-  information can be shared in small team and between PCs.
+* `RedisBackend`: Information is stored in Redis. If you setup redis-server,
+  information can be shared in a small team and between some PCs.
 
 You can specify required `Backend` via `backend` keyword in `Experiment` instanciation.
 
@@ -46,13 +46,13 @@ The following table shows information and its saved location under cache directo
 ================================== ====== ===================
 Information                        Format Path
 ================================== ====== ===================
-Experiment Status (internal state) Pickle <experiment id>.pkl
-Experiment History                 Pickle <experiment id>.pkl
-Persisted Results                  Pickle persist/<experiment id>_<function name>_<trial id>.pkl
+Experiment status (internal state) Pickle <experiment id>.pkl
+Experiment history                 Pickle <experiment id>.pkl
+Persisted results                  Pickle persist/<experiment id>_<function name>_<trial id>.pkl
 Metrics                            Pickle <experiment id>.pkl
 Code contexts                      Text   code/<experiment id>_<trial id>.py
-Device Information                 Text   environmemt/requirements_<experiment id>_<trial id>.txt
-Python Package Information         Text   environmemt/device_<experiment id>_<trial id>.txt
+Device information                 Text   environmemt/requirements_<experiment id>_<trial id>.txt
+Python package information         Text   environmemt/device_<experiment id>_<trial id>.txt
 ================================== ====== ===================
 
 
@@ -83,12 +83,12 @@ The following table shows information and its saved location under Redis databas
 ================================== ====== ===================
 Information                        Format Key
 ================================== ====== ===================
-Experiment Status (internal state) Text   <experiment id>:trial_id
-Experiment History (parameters)    Pickle <experiment id>:parameter:<trial id>
-Experiment History (results)       Pickle <experiment id>:history:<trial id>
-Persisted Results                  Pickle <experiment_id>:persist:<function name>:<trial id>
+Experiment status (internal state) Text   <experiment id>:trial_id
+Experiment history (parameters)    Pickle <experiment id>:parameter:<trial id>
+Experiment history (results)       Pickle <experiment id>:history:<trial id>
+Persisted results                  Pickle <experiment_id>:persist:<function name>:<trial id>
 Metrics                            Pickle <experiment id>:metric:<metric name>:<trial id>
 Code contexts                      Text   <experiment_id>:code:<trial id>
-Device Information                 Text   <experiment_id>:requirements:<trial id>
-Python Package Information         Text   <experiment_id>:device:<trial id>
+Device information                 Text   <experiment_id>:requirements:<trial id>
+Python package information         Text   <experiment_id>:device:<trial id>
 ================================== ====== ===================
