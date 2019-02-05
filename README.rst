@@ -33,7 +33,7 @@ Benefits
 
     - Setting up server applications.
     - Register to cloud services.
-    - Constrained slightly customized Python shells.
+    - Be constrained by slightly customized Python shells.
 
 - User-intuitive.
 
