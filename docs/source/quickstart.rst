@@ -28,7 +28,7 @@ Then, use `Experiment.parameter` method to define parameters (input variables fo
    Parameter(a: Undefined)
 
 
-Next, you can define each experiment step (function) by decorating with Experiment instance (`@ex`).
+Next, you can define each experiment step (function) by decorating with `Experiment` instance (`@ex`).
 
 Note that the function to output the final result (mostly objective value to be minimized or maximized) must be decorated with `Experiment.result`. The chain of these functions are expressed as `Dask.Delayed` instance.
 
@@ -191,7 +191,7 @@ Let's perform some trials.
    2.0
 
 
-You can retrieve intermediate results via Experiment.get_persisted method by specifying function name and trial id.
+You can retrieve intermediate results via `Experiment.get_persisted` method by specifying function name and trial id.
 
 
 .. code-block:: python
@@ -306,13 +306,13 @@ To check the tracked code contexts, use `Experiment.get_code` specifying trial i
 Each code context is also saved as a text file per trial id. Thus, these are easily handled by diff tools and Git.
 
 
-Save Experiment Result
+Save Experiment Status
 ----------------------
 
 
-`daskperiment` automatically saves its internal state when the experiment result is computed (when `.compute` is called). Also, `Experiment` instance automatically recover previous state when it is instanciated.
+`daskperiment` automatically saves its internal state when the experiment result is computed (when `.compute` is called). Also, `Experiment` instance recovers previous state when it is instanciated.
 
-Following example instanciates `Experiment` instance using the same id as above. Thus, the created `Experiment` automatically recovers its state.
+Following example instanciates `Experiment` instance using the same id as above. Thus, the created `Experiment` recovers its previous trial history.
 
 .. code-block:: python
 
