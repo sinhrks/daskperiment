@@ -179,7 +179,7 @@ class Experiment(object):
     # Parameter
     ##########################################################
 
-    def parameter(self, name):
+    def parameter(self, name, default=None):
         """
         Declare a parameter in the Experiment.
 
@@ -191,12 +191,14 @@ class Experiment(object):
         name: str
            Parameter variable name in the Experiment.
            You must specify the name provided here in .set_parameters.
+        default: object, optional
+           Default value of the parameter.
 
         Returns
         -------
         Parameter: parameter
         """
-        return self._parameters.define(name)
+        return self._parameters.define(name, default=default)
 
     def set_parameters(self, **kwargs):
         """

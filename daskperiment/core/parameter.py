@@ -74,7 +74,7 @@ class ParameterManager(object):
     def to_dict(self):
         return dict(self._parameters)
 
-    def define(self, name):
+    def define(self, name, default=None):
         """"
         Declare parameter
         """
@@ -82,7 +82,10 @@ class ParameterManager(object):
             msg = 'Re-defining existing parameter: {}'
             logger.debug(msg.format(name))
         else:
-            self._parameters[name] = Undefined()
+            if default is None:
+                self._parameters[name] = Undefined()
+            else:
+                self._parameters[name] = default
         # resolve_parameter returns a function to resolve parameter
         # otherwise parameter name collides in arg and dask_key_name
         return Parameter(self, name)
