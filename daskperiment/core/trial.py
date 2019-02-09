@@ -13,7 +13,7 @@ logger = get_logger(__name__)
 class TrialResult(object):
 
     def __init__(self, result, success, finished,
-                 process_time, description):
+                 process_time, description, seed):
         self.result = result
         if result is None:
             self.result_type = 'None'
@@ -23,6 +23,7 @@ class TrialResult(object):
         self.finished = finished
         self.process_time = process_time
         self.description = description
+        self.seed = seed
 
     def __repr__(self):
         if self.success:
@@ -37,7 +38,8 @@ class TrialResult(object):
                   'Success': self.success,
                   'Finished': self.finished,
                   'Process Time': self.process_time,
-                  'Description': self.description}
+                  'Description': self.description,
+                  'Seed': self.seed}
         return record
 
 
@@ -95,12 +97,12 @@ class _TrialManager(object):
         msg = 'Started Experiment (trial id={})'
         logger.info(msg.format(self.current_trial_id))
 
-    def finish_trial(self, result, success, description):
+    def finish_trial(self, result, success, description, seed):
         end_time = pd.Timestamp.now()
         record = TrialResult(result=result, success=success,
                              finished=end_time,
                              process_time=end_time - self._start_time,
-                             description=description)
+                             description=description, seed=seed)
         self.save_history(record)
 
         msg = 'Finished Experiment (trial id={})'
@@ -151,8 +153,8 @@ class _TrialManager(object):
 
         parameters = pd.DataFrame.from_dict(params,
                                             orient='index')
-        result_index = ['Result', 'Result Type', 'Success', 'Finished',
-                        'Process Time', 'Description']
+        result_index = ['Seed', 'Result', 'Result Type', 'Success',
+                        'Finished', 'Process Time', 'Description']
         result_index = pd.Index(result_index, name='Trial ID')
         # pandas 0.22 or earlier does't support columns kw
         results = pd.DataFrame.from_dict(history,

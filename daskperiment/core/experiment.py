@@ -53,26 +53,26 @@ class Result(Delayed):
         self._experiment._result = True
         self._maybe_file()
 
-    def compute(self, **kwargs):
+    def compute(self, seed=None, **kwargs):
         # increment trial id before experiment start
         exp = self._experiment
         exp._prepare_experiment_step()
 
-        logger.info('Target: {}'.format(self._key))
-
         try:
+            logger.info('Target: {}'.format(self._key))
+            seed = exp.set_seed(seed)
             # save may raise errors
             exp._save_experiment_step()
 
             result = super().compute(**kwargs)
             exp._finish_experiment_step(result=result, success=True,
-                                        description=np.nan)
+                                        description=np.nan, seed=seed)
             return result
         except Exception as e:
             description = '{}({})'.format(e.__class__.__name__, e)
             logger.error('Experiment failed: {}'.format(description))
             exp._finish_experiment_step(result=None, success=False,
-                                        description=description)
+                                        description=description, seed=seed)
             raise
 
     def _maybe_file(self):
@@ -106,7 +106,7 @@ class Experiment(object):
 
     _instance_cache = {}
 
-    def __new__(cls, id, backend='local'):
+    def __new__(cls, id, backend='local', seed=None):
         # return the identical instance based on id
         if id in cls._instance_cache:
             return cls._instance_cache[id]
@@ -118,13 +118,14 @@ class Experiment(object):
         cls._instance_cache[id] = obj
         return obj
 
-    def __init__(self, id, backend='local'):
+    def __init__(self, id, backend='local', seed=None):
         """
         Automatically load myself if cached pickle file exists
         """
         self._backend = init_backend(experiment_id=self.id,
                                      backend=backend)
         self._backend = self._backend.load()
+        self._seed = seed
 
         if self.trial_id != 0:
             msg = 'Loaded existing experiment: {}'
@@ -236,6 +237,26 @@ class Experiment(object):
             self._check_trial_id(trial_id)
             return self._trials.load_parameters(trial_id)
 
+    def set_seed(self, seed=None):
+        if seed is None:
+            # use experiment default
+            seed = self._seed
+
+        if seed is None:
+            # If seed is not provided, generate new seed
+            seed = np.random.randint(2 ** 32 - 1)
+            msg = ('Random seed is not provided. '
+                   'Initializing with generated seed: {}')
+            logger.info(msg.format(seed))
+        else:
+            msg = ('Random seed is initialized with given seed: {}')
+            logger.info(msg.format(seed))
+
+        import random
+        random.seed(seed)
+        np.random.seed(seed)
+        return seed
+
     ##########################################################
     # Save / load myself
     ##########################################################
@@ -346,12 +367,12 @@ class Experiment(object):
         self._codes.save(trial_id)
         self._environment.save(trial_id)
 
-    def _finish_experiment_step(self, result, success, description):
+    def _finish_experiment_step(self, result, success, description, seed):
         """
         Finish the trial
         """
         self._trials.finish_trial(result=result, success=success,
-                                  description=description)
+                                  description=description, seed=seed)
         self._save()
 
     def _check_trial_id(self, trial_id):
