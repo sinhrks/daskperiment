@@ -88,6 +88,25 @@ class ExperimentBase(object):
 
         ex._delete_cache()
 
+    def test_parameter_default(self):
+        ex = daskperiment.Experiment(id="test_undefined_param",
+                                     backend=self.backend)
+        a = ex.parameter('a', default=2)
+        assert a.compute() == 2
+
+        @ex.result
+        def inc(a):
+            return a + 1
+
+        res = inc(a)
+
+        assert res.compute() == 3
+
+        ex.set_parameters(a=3)
+        assert res.compute() == 4
+
+        ex._delete_cache()
+
     def test_compute(self):
         ex = daskperiment.Experiment(id="test_parameter",
                                      backend=self.backend)
@@ -323,6 +342,8 @@ class ExperimentBase(object):
         # result should be different (in almost all cases)
         assert res.compute() != res.compute()
 
+        ex._delete_cache()
+
     @pytest.mark.parametrize('random_func', [random.random,
                                              np.random.random])
     def test_random_seed(self, random_func):
@@ -336,6 +357,8 @@ class ExperimentBase(object):
         res = rand()
         assert res.compute(seed=1) != res.compute(seed=2)
         assert res.compute(seed=1) == res.compute(seed=1)
+
+        ex._delete_cache()
 
     @pytest.mark.parametrize('random_func', [random.random,
                                              np.random.random])
@@ -353,6 +376,8 @@ class ExperimentBase(object):
         assert res.compute() == res.compute(seed=1)
         assert res.compute(seed=1) != res.compute(seed=2)
         assert res.compute(seed=1) == res.compute(seed=1)
+
+        ex._delete_cache()
 
     def test_metric(self):
         ex = daskperiment.Experiment(id="test_metric", backend=self.backend)
