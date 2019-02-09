@@ -539,3 +539,14 @@ class Experiment(object):
         else:
             self._check_trial_id(trial_id)
             return self._environment.load_python_packages(trial_id)
+
+    ##########################################################
+    # Dashboard
+    ##########################################################
+
+    def start_dashboard(self, port=5000):
+        """
+        Start DaskperimentBoard web application.
+        """
+        import daskperiment.board.board as board
+        return board.maybe_start_dashboard(self, port=port)

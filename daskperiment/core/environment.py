@@ -82,6 +82,9 @@ class Environment(object):
     def maybe_file(self):
         return self.python_shell == 'File'
 
+    def maybe_jupyter(self):
+        return self.python_shell == 'Jupyter Notebook'
+
     def _get_python_packages(self):
         import pkg_resources
         return pkg_resources.working_set

@@ -40,6 +40,8 @@ class MetricManagerBase(object):
         exp = pd.DataFrame({11: [2]}, index=exp_idx, columns=exp_columns)
         tm.assert_frame_equal(res, exp)
 
+        assert m.keys() == ['dummy_metric1']
+
         m.save('dummy_metric2', trial_id=11, epoch=1, value=5)
         res = m.load('dummy_metric2', trial_id=[11])
         exp_idx = pd.Index([1], name='Epoch')
@@ -120,6 +122,8 @@ class MetricManagerBase(object):
         ex.set_parameters(a=2)
         assert res.compute() == 3
 
+        assert ex._metrics.keys() == ['exp_metric1', 'exp_metric2']
+
         res = ex.load_metric('exp_metric1', trial_id=[1, 2])
         exp_idx = pd.Index([1, 3], name='Epoch')
         exp_columns = pd.Index([1, 2], name='Trial ID')
@@ -137,6 +141,7 @@ class MetricManagerBase(object):
         # check with another instance
         del daskperiment.Experiment._instance_cache['metric_experiment']
         ex = daskperiment.Experiment('metric_experiment', backend=self.backend)
+        assert ex._metrics.keys() == ['exp_metric1', 'exp_metric2']
 
         res = ex.load_metric('exp_metric1', trial_id=[1, 2])
         exp_idx = pd.Index([1, 3], name='Epoch')

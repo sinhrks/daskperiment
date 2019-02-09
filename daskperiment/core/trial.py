@@ -110,7 +110,7 @@ class _TrialManager(object):
 
     def maybe_pure(self, func, inputs, result):
         """
-        Check whether the function is pureself.
+        Check whether the function is pure.
 
         Actually, it only compares the hash of the function result based on
         its input.
@@ -168,8 +168,11 @@ class LocalTrialManager(_TrialManager):
     def __init__(self, backend):
         super().__init__(backend)
         self._trial_id = 0
+
         self._parameters_history = {}
         self._result_history = {}
+
+        # store function input hash and its output hash
         self._hashes = {}
 
     @property

@@ -10,6 +10,9 @@ class LocalMetricManager(_MetricManager):
         super().__init__(backend)
         self.metrics = {}
 
+    def keys(self):
+        return list(self.metrics.keys())
+
     def _save(self, metric_key, trial_id, epoch, value):
         if metric_key not in self.metrics:
             self.metrics[metric_key] = Metric(metric_key)
