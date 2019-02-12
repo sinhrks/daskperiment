@@ -1,6 +1,23 @@
 What's new
 ==========
 
+v0.3.0
+------
+
+Enhancement
+^^^^^^^^^^^
+
+* Function purity check
+* Random seed handling
+* Parameter now supports default value
+* (Experimental) Minimal dashboard
+
+
+Bug fix
+^^^^^^^
+
+* `Experiment.get_history` with no parameters results in empty `DataFrame`.
+
 v0.2.0
 ------
 

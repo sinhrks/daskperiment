@@ -306,6 +306,59 @@ To check the tracked code contexts, use `Experiment.get_code` specifying trial i
 Each code context is also saved as a text file per trial id. Thus, these are easily handled by diff tools and Git.
 
 
+Function Purity and Handling Randomness
+---------------------------------------
+
+To make the experiment reproducible, all the experiment step should be "pure" function (it the inputs are the same, output shouldn't be changed). In other words, the function should not have internal state nor randomness.
+
+`daskperiment` checks whether each experiment step is pure. It internally stores the hash of inputs and output, and shows a warning if its output is changed even though the inputs are unchanged.　
+
+To illustrate this, add randomness to the example code.
+
+.. code-block:: python
+
+   >>> @ex.result
+   >>> def calculate_score(s):
+   >>>     for i in range(100):
+   >>>         ex.save_metric('dummy_score', epoch=i, value=100 - np.random.random() * i)
+
+   >>>     return 10 / s + np.random.random()
+
+   >>> d = prepare_data(a, b)
+   >>> s = calculate_score(d)
+
+Because of the code change, it outputs the different results even though its inputs (parameters) are unchanged. `daskperiment` shows the warning.
+
+.. code-block:: python
+
+   >>> s.compute()
+   ...
+   ... [WARNING] Experiment step result is changed with the same input: (step: calculate_score, args: (7,), kwargs: {})
+   ... [daskperiment.core.trial] [INFO] Finished Experiment (trial id=8)
+   2.1481070929378823
+
+The function outputs different result in every trial because of the randomness.
+To make the function reproducible, random seed should be provided.
+
+To do this, pass `seed` argument to `compute` method. Note that this trial shows the warning because its result is changed comparing to the previous result (no seed).
+
+.. code-block:: python
+
+   >>> s.compute(seed=1)
+   ...
+   ... [WARNING] Experiment step result is changed with the same input: (step: calculate_score, args: (7,), kwargs: {})
+   ... [INFO] Finished Experiment (trial id=9)
+   1.7552163303435249
+
+Another trial with the same seed doesn't show the warning, because the result is unchanged.
+
+.. code-block:: python
+
+   >>> s.compute(seed=1)
+   ...
+   ... [INFO] Finished Experiment (trial id=9)
+   1.7552163303435249
+
 Save Experiment Status
 ----------------------
 

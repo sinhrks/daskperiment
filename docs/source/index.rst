@@ -25,6 +25,7 @@ It can be used in both Jupyter and command line (and also in standard Python int
   - Performing experiments using `Dask` compatible API.
   - Easily handle experiments history (with `pandas` basic operations).
   - Requires less work to manage with Git (no need to make branch per trials).
+  - (Experimental) Web dashboard to manage trial history
 
 - Tracking experiment result and its (hyper) parameters.
 - Tracking environment.
