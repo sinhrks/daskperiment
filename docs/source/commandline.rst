@@ -65,3 +65,13 @@ To confirm the experiment results, instanciate `Experiment` specifying the same 
         Process Time  Description
    1 00:00:00.009560          NaN
    2 00:00:00.006512          NaN
+
+
+Command Line Options
+--------------------
+
+Use `--seed` option to provide random seed from terminal, 
+
+.. code-block:: sh
+
+  python random_experiment.py --seed 1

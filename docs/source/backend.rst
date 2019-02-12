@@ -50,6 +50,7 @@ Experiment status (internal state) Pickle <experiment id>.pkl
 Experiment history                 Pickle <experiment id>.pkl
 Persisted results                  Pickle persist/<experiment id>_<function name>_<trial id>.pkl
 Metrics                            Pickle <experiment id>.pkl
+Function input & output hash       Pickle <experiment id>.pkl
 Code contexts                      Text   code/<experiment id>_<trial id>.py
 Device information                 Text   environmemt/device_<experiment id>_<trial id>.txt
 Python package information         Text   environmemt/requirements_<experiment id>_<trial id>.txt
@@ -88,6 +89,7 @@ Experiment history (parameters)    Pickle <experiment id>:parameter:<trial id>
 Experiment history (results)       Pickle <experiment id>:history:<trial id>
 Persisted results                  Pickle <experiment_id>:persist:<function name>:<trial id>
 Metrics                            Pickle <experiment id>:metric:<metric name>:<trial id>
+Function input & output hash       Text   <experiment id>:step_hash:<function name>-<input hash>
 Code contexts                      Text   <experiment_id>:code:<trial id>
 Device information                 Text   <experiment_id>:device:<trial id>
 Python package information         Text   <experiment_id>:requirements:<trial id>
