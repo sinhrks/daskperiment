@@ -1,5 +1,4 @@
 import functools
-import os
 
 import numpy as np
 import pandas as pd
@@ -80,9 +79,9 @@ class Result(Delayed):
         Perform computation if experiment script is executed as file
         """
         if self._experiment._environment.maybe_file():
-            parameters = parse_command_arguments()
+            seed, parameters = parse_command_arguments()
             self._experiment.set_parameters(**parameters)
-            self.compute()
+            self.compute(seed=seed)
 
 
 def wrap_result(experiment, func, persist=False):
@@ -160,6 +159,16 @@ class Experiment(object):
         Thus, actual trial ID is fixed after the trial is started.
         """
         return self._trials.trial_id
+
+    @property
+    def current_trial_id(self):
+        """
+        Return current trial ID of the trial.
+
+        It is accessible during the trial is performing, and specifies the ID
+        which the trial is stored.
+        """
+        return self._trials.current_trial_id
 
     @property
     def _trials(self):
@@ -247,8 +256,8 @@ class Experiment(object):
         if seed is None:
             # If seed is not provided, generate new seed
             seed = np.random.randint(2 ** 32 - 1)
-            msg = ('Random seed is not provided. '
-                   'Initializing with generated seed: {}')
+            msg = ('Random seed is not provided, '
+                   'initialized with generated seed: {}')
             logger.info(msg.format(seed))
         else:
             msg = ('Random seed is initialized with given seed: {}')
@@ -452,11 +461,9 @@ class Experiment(object):
         -------
         str: code_context
         """
-        if trial_id is None:
-            return self._codes.describe()
-        else:
+        if trial_id is not None:
             self._check_trial_id(trial_id)
-            return self._codes.load(trial_id)
+        return self._codes.get_code(trial_id=trial_id)
 
     ##########################################################
     # Metrics management
@@ -509,11 +516,12 @@ class Experiment(object):
     def _check_environment_change(self):
         trial_id = self.trial_id
         if trial_id > 0:
-            previous = self.get_environment(trial_id)
-            self._environment.check_environment_change(previous)
+            # Code change shouldn't be checked here,
+            # codes are registered after instanciation
+            # self._codes.check_code_change(trial_id)
 
-            previous = self.get_python_packages(trial_id)
-            self._environment.check_python_packages_change(previous)
+            self._environment.check_environment_change(trial_id)
+            self._environment.check_python_packages_change(trial_id)
 
     def get_environment(self, trial_id=None):
         """
@@ -533,12 +541,9 @@ class Experiment(object):
         -------
         list of str: environment
         """
-        if trial_id is None:
-            text = os.linesep.join(self._environment.get_device_info())
-            return text
-        else:
+        if trial_id is not None:
             self._check_trial_id(trial_id)
-            return self._environment.load_device_info(trial_id)
+        return self._environment.get_environment(trial_id=trial_id)
 
     def get_python_packages(self, trial_id=None):
         """
@@ -556,12 +561,9 @@ class Experiment(object):
         -------
         list of str: packages
         """
-        if trial_id is None:
-            text = os.linesep.join(self._environment.get_python_packages())
-            return text
-        else:
+        if trial_id is not None:
             self._check_trial_id(trial_id)
-            return self._environment.load_python_packages(trial_id)
+        return self._environment.get_python_packages(trial_id=trial_id)
 
     ##########################################################
     # Dashboard

@@ -50,16 +50,30 @@ class CodeManager(object):
 
         # if key is found in ANY PREVIOUS experiments
         if key in self.history:
-            if self.history[key] != source:
-                msg = 'Code context has been changed: {}'
-                logger.warning(msg.format(key))
-                for d in unified_diff(self.history[key], source):
-                    logger.warning(d)
+            self._output_difference(self.history[key], source, key=key)
         self.history[key] = source
 
         # if new key is being registered to CURRENT experiment
         if key not in self.codes:
             self.codes.append(key)
+
+    def _output_difference(self, previous, current, key=None):
+        if previous != current:
+            if key is None:
+                msg = 'Code context has been changed'
+                logger.warning(msg)
+            else:
+                msg = 'Code context has been changed: {}'
+                logger.warning(msg.format(key))
+
+            for d in unified_diff(previous, current):
+                logger.warning(d)
+
+    def get_code(self, trial_id=None):
+        if trial_id is None:
+            return self.describe()
+        else:
+            return self.load(trial_id)
 
     def describe(self):
         """
@@ -86,3 +100,8 @@ class CodeManager(object):
         # skip header
         codes = code_context.splitlines()[1:]
         return os.linesep.join(codes) + os.linesep
+
+    def check_code_change(self, trial_id):
+        current = self.get_code()
+        previous = self.get_code(trial_id=trial_id)
+        self._output_difference(previous, current)

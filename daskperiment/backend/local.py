@@ -26,10 +26,9 @@ class LocalBackend(_BaseBackend):
         pickle.maybe_create_dir('cache', self.cache_dir)
 
         # do not output INFO logs child folders
-        pickle.maybe_create_dir('code', self.code_dir, info=False)
-        pickle.maybe_create_dir('environment', self.environment_dir,
-                                info=False)
-        pickle.maybe_create_dir('persist', self.persist_dir, info=False)
+        pickle.maybe_create_dir('code', self.code_dir)
+        pickle.maybe_create_dir('environment', self.environment_dir)
+        pickle.maybe_create_dir('persist', self.persist_dir)
 
     def __repr__(self):
         return "LocalBackend('{}')".format(self.cache_dir)
@@ -73,8 +72,16 @@ class LocalBackend(_BaseBackend):
         fname = 'requirements_{}_{}.txt'.format(self.experiment_id, trial_id)
         return self.environment_dir / fname
 
-    def get_device_info_key(self, trial_id):
-        fname = 'device_{}_{}.txt'.format(self.experiment_id, trial_id)
+    def get_platform_info_key(self, trial_id):
+        fname = 'device_{}_{}.json'.format(self.experiment_id, trial_id)
+        return self.environment_dir / fname
+
+    def get_python_info_key(self, trial_id):
+        fname = 'python_{}_{}.json'.format(self.experiment_id, trial_id)
+        return self.environment_dir / fname
+
+    def get_git_info_key(self, trial_id):
+        fname = 'git_{}_{}.json'.format(self.experiment_id, trial_id)
         return self.environment_dir / fname
 
     def save_text(self, key, text):

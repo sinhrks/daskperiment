@@ -7,13 +7,16 @@ PARAM = Word(alphanums + '_') + '=' + Word(printables)
 
 def parse_command_arguments():
     parser = argparse.ArgumentParser()
-    _, unknowns = parser.parse_known_args()
+    parser.add_argument('--seed', type=int)
+
+    knowns, unknowns = parser.parse_known_args()
+    seed = knowns.seed
 
     parameters = {}
     for expr in unknowns:
         lvalue, rvalue = parse_parameter(expr)
         parameters[lvalue] = rvalue
-    return parameters
+    return seed, parameters
 
 
 def parse_parameter(param_expr):

@@ -58,3 +58,27 @@ class TestCommand(object):
         # cleanup
         e = daskperiment.Experiment('simple_experiment_pj')
         e._delete_cache()
+
+    @pytest.mark.skipif(daskperiment.testing.IS_TRAVIS,
+                        reason='skip on Travis CI')
+    def test_random_experiment_no_params(self):
+        file = 'scripts/random_experiment.py'
+
+        p = subprocess.Popen([sys.executable, file], stdout=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        assert p.returncode == 0
+
+        # provide seed
+        p = subprocess.Popen([sys.executable, file, '--seed', '1'],
+                             stdout=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        assert p.returncode == 0
+
+        # cleanup
+        e = daskperiment.Experiment('random_experiment_pj')
+        h = e.get_history()
+        print(h)
+        assert h.loc[1, 'Result'] != 0.5513862488149752
+        assert h.loc[2, 'Result'] == 0.5513862488149752
+
+        e._delete_cache()
