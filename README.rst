@@ -42,6 +42,7 @@ Benefits
   - (Experimental) Web dashboard to manage trial history.
 
 - Tracking experiment related information
+
   - Trial result and its (hyper) parameters.
   - Code context.
   - Environment information.
