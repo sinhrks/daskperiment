@@ -26,7 +26,8 @@ It can be used in both Jupyter and command line (and also in standard Python int
   - Requires less work to manage with Git (no need to make branch per trials).
   - (Experimental) Web dashboard to manage trial history.
 
-- Tracking experiment related information
+- Tracking experiment related information.
+
   - Trial result and its (hyper) parameters.
   - Code context.
   - Environment information.
@@ -37,7 +38,7 @@ It can be used in both Jupyter and command line (and also in standard Python int
     - Installed Python packages and its version
     - Git information
 
-- Reproducibility
+- Reproducibility.
 
   - Check function purity (each step should return the same output for the same inputs)
   - Automatic random seeding
