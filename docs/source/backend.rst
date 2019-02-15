@@ -52,9 +52,9 @@ Persisted results                  Pickle     persist/<experiment id>_<function 
 Metrics                            Pickle     <experiment id>.pkl
 Function input & output hash       Pickle     <experiment id>.pkl
 Code contexts                      Text       code/<experiment id>_<trial id>.py
-Platform information               Text(JSON) environmemt/device_<experiment id>_<trial id>.txt
-Python information                 Text(JSON) environmemt/python_<experiment id>_<trial id>.txt
-Git information                    Text(JSON) environmemt/git_<experiment id>_<trial id>.txt
+Platform information               Text(JSON) environmemt/device_<experiment id>_<trial id>.json
+Python information                 Text(JSON) environmemt/python_<experiment id>_<trial id>.json
+Git information                    Text(JSON) environmemt/git_<experiment id>_<trial id>.json
 Python package information         Text       environmemt/requirements_<experiment id>_<trial id>.txt
 ================================== ========== ===================
 
