@@ -22,8 +22,6 @@ The package is built on `Dask`, a package for parallel computing with task
 scheduling. Each experiment trial is internally expressed as `Dask` computation
 graph, and can be executed in parallel.
 
-**The package is EXTREMELY unstable.**
-
 Benefits
 ~~~~~~~~
 
