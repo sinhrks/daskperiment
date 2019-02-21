@@ -58,4 +58,5 @@ Contents:
    quickstart
    dashboard
    commandline
+   tips
    backend
