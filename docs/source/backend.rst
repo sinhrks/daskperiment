@@ -94,7 +94,7 @@ Metrics                            Pickle     <experiment id>:metric:<metric nam
 Function input & output hash       Text       <experiment id>:step_hash:<function name>-<input hash>
 Code contexts                      Text       <experiment_id>:code:<trial id>
 Platform information               Text(JSON) <experiment_id>:device:<trial id>
-Python information                 Text(JSON) <experiment_id>:device:<trial id>
-Git information                    Text(JSON) <experiment_id>:device:<trial id>
+Python information                 Text(JSON) <experiment_id>:python:<trial id>
+Git information                    Text(JSON) <experiment_id>:git:<trial id>
 Python package information         Text       <experiment_id>:requirements:<trial id>
 ================================== ========== ===================
