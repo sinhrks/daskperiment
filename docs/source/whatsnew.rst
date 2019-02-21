@@ -10,6 +10,7 @@ Enhancement
 * Function purity check
 * Random seed handling
 * Parameter now supports default value
+* Capture Git info
 * (Experimental) Minimal dashboard
 
 Bug fix
