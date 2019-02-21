@@ -1,8 +1,6 @@
-import pandas as pd
-
 from daskperiment.core.errors import TrialIDNotFoundError
 from daskperiment.core.metric.base import _MetricManager
-import daskperiment.io.json as json
+import daskperiment.io.pickle as pickle
 
 
 class RedisMetricManager(_MetricManager):
@@ -26,10 +24,9 @@ class RedisMetricManager(_MetricManager):
         return '{}:metric:{}:{}'.format(self.experiment_id,
                                         metric_key, trial_id)
 
-    def _save(self, metric_key, trial_id, epoch, value):
+    def _save(self, metric_key, trial_id, record):
         redis_key = self._get_redis_key(metric_key, trial_id)
-        val = json.dumps(dict(Epoch=epoch, Value=value))
-        self.client.rpush(redis_key, val)
+        self.client.rpush(redis_key, pickle.dumps(record))
 
     def _load_single(self, metric_key, trial_id):
         redis_key = self._get_redis_key(metric_key, trial_id)
@@ -43,8 +40,6 @@ class RedisMetricManager(_MetricManager):
             else:
                 raise TrialIDNotFoundError(trial_id)
 
-        values = [json.loads(value) for value in values]
-        df = pd.DataFrame(values)
-        df = df.set_index('Epoch')
-        df.columns = [trial_id]
-        return df
+        values = [pickle.loads(value) for value in values]
+
+        return self._wrap_single_result(values, trial_id)
