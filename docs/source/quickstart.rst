@@ -306,7 +306,7 @@ To check the tracked code contexts, use `Experiment.get_code` specifying trial i
 Each code context is also saved as a text file per trial id. Thus, these are easily handled by diff tools and Git.
 
 
-Function Purity and Handling Randomness
+Function Purity And Handling Randomness
 ---------------------------------------
 
 To make the experiment reproducible, all the experiment step should be "pure" function (it the inputs are the same, output shouldn't be changed). In other words, the function should not have internal state nor randomness.

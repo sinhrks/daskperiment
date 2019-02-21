@@ -3,7 +3,7 @@ Dashboard
 
 `daskperiment` supports a web dashboard to check experiment histories.
 
-Launch from script
+Launch From Script
 ------------------
 
 To launch the dashboard from script, use `Experiment.start_dashboard`.
@@ -17,7 +17,7 @@ shell like Jupyter, and be blocking if it is executed as a file.
    >>> ex.start_dashboard()
 
 
-Launch from terminal
+Launch From Terminal
 --------------------
 
 To launch from the terminal, use `daskperimentboard` command providing your
@@ -28,7 +28,7 @@ experiment id.
    daskperimentboard your_experiment_id
 
 
-Access to the dashboard
+Access To The Dashboard
 -----------------------
 
 After launching the dashboard, open
