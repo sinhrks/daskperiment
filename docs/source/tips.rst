@@ -31,7 +31,7 @@ Check Trial ID During Execution
 -------------------------------
 
 You may want to know the current trial id during the trial.
-Use 'Experiment.current_trial_id' to check current trial id.
+Use `Experiment.current_trial_id` to check current trial id.
 
 .. code-block:: python
 
@@ -57,5 +57,5 @@ use `.trial_id` property.
   3
 
 The next trial should be numbered as `.trial_id + 1`, if no other trial is triggered until your execution.
-Note that `.trial_id` cannot be referred during trial execution to avoid confusion between
+Note that `.trial_id` cannot be referred during a trial execution to avoid confusion between
 `.trial_id` and `.current_trial_id`.
