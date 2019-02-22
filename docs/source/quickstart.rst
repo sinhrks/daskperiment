@@ -334,7 +334,7 @@ Because of the code change, it outputs the different results even though its inp
    >>> s.compute()
    ...
    ... [WARNING] Experiment step result is changed with the same input: (step: calculate_score, args: (7,), kwargs: {})
-   ... [daskperiment.core.trial] [INFO] Finished Experiment (trial id=8)
+   ... [INFO] Finished Experiment (trial id=8)
    2.1481070929378823
 
 The function outputs different result in every trial because of the randomness.
