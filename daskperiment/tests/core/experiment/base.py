@@ -11,13 +11,17 @@ from daskperiment.backend import LocalBackend
 from daskperiment.core.errors import LockedTrialError, TrialIDNotFoundError
 
 
-def assert_history_equal(df, exp):
-    exp_index = ['Seed', 'Result', 'Result Type', 'Success', 'Finished',
-                 'Process Time', 'Description']
+def assert_history_equal(df, exp, verbose=False):
+    if verbose:
+        exp_index = ['Seed', 'Result', 'Result Type', 'Success', 'Finished',
+                     'Process Time', 'Description']
+        dropper = ['Seed', 'Finished', 'Process Time']
+    else:
+        exp_index = ['Result', 'Success', 'Finished',
+                     'Process Time', 'Description']
+        dropper = ['Finished', 'Process Time']
     tm.assert_index_equal(df.columns[-len(exp_index):], pd.Index(exp_index))
-    tm.assert_frame_equal(df.drop(['Seed', 'Finished', 'Process Time'],
-                                  axis=1),
-                          exp)
+    tm.assert_frame_equal(df.drop(dropper, axis=1), exp)
 
 
 class ExperimentBase(object):
@@ -127,13 +131,26 @@ class ExperimentBase(object):
         hist = ex.get_history()
         exp = pd.DataFrame({'a': [1, 3],
                             'Result': [2, 4],
+                            'Success': [True, True],
+                            'Description': [np.nan, np.nan]},
+                           index=pd.Index([1, 2], name='Trial ID'),
+                           columns=['a', 'Result',
+                                    'Success', 'Description'])
+        assert_history_equal(hist, exp)
+
+        hist = ex.get_history(verbose=False)
+        assert_history_equal(hist, exp)
+
+        hist = ex.get_history(verbose=True)
+        exp = pd.DataFrame({'a': [1, 3],
+                            'Result': [2, 4],
                             'Result Type': ["<class 'int'>"] * 2,
                             'Success': [True, True],
                             'Description': [np.nan, np.nan]},
                            index=pd.Index([1, 2], name='Trial ID'),
                            columns=['a', 'Result', 'Result Type',
                                     'Success', 'Description'])
-        assert_history_equal(hist, exp)
+        assert_history_equal(hist, exp, verbose=True)
 
         ex._delete_cache()
 
@@ -160,13 +177,26 @@ class ExperimentBase(object):
         hist = ex.get_history()
         exp = pd.DataFrame({'a': [1, 3],
                             'Result': [6, 10],
+                            'Success': [True, True],
+                            'Description': [np.nan, np.nan]},
+                           index=pd.Index([1, 2], name='Trial ID'),
+                           columns=['a', 'Result',
+                                    'Success', 'Description'])
+        assert_history_equal(hist, exp)
+
+        hist = ex.get_history(verbose=False)
+        assert_history_equal(hist, exp)
+
+        hist = ex.get_history(verbose=True)
+        exp = pd.DataFrame({'a': [1, 3],
+                            'Result': [6, 10],
                             'Result Type': ["<class 'int'>"] * 2,
                             'Success': [True, True],
                             'Description': [np.nan, np.nan]},
                            index=pd.Index([1, 2], name='Trial ID'),
                            columns=['a', 'Result', 'Result Type',
                                     'Success', 'Description'])
-        assert_history_equal(hist, exp)
+        assert_history_equal(hist, exp, verbose=True)
 
         ex._delete_cache()
 
@@ -185,13 +215,24 @@ class ExperimentBase(object):
 
         hist = ex.get_history()
         exp = pd.DataFrame({'Result': [1, 1],
+                            'Success': [True, True],
+                            'Description': [np.nan, np.nan]},
+                           index=pd.Index([1, 2], name='Trial ID'),
+                           columns=['Result', 'Success', 'Description'])
+        assert_history_equal(hist, exp)
+
+        hist = ex.get_history(verbose=False)
+        assert_history_equal(hist, exp)
+
+        hist = ex.get_history(verbose=True)
+        exp = pd.DataFrame({'Result': [1, 1],
                             'Result Type': ["<class 'int'>"] * 2,
                             'Success': [True, True],
                             'Description': [np.nan, np.nan]},
                            index=pd.Index([1, 2], name='Trial ID'),
                            columns=['Result', 'Result Type',
                                     'Success', 'Description'])
-        assert_history_equal(hist, exp)
+        assert_history_equal(hist, exp, verbose=True)
 
         ex._delete_cache()
 
@@ -221,13 +262,25 @@ class ExperimentBase(object):
         hist = ex.get_history()
         exp = pd.DataFrame({'a': [1, 3],
                             'Result': [3, 7],
+                            'Success': [True, True],
+                            'Description': [np.nan, np.nan]},
+                           index=pd.Index([1, 2], name='Trial ID'),
+                           columns=['a', 'Result', 'Success', 'Description'])
+        assert_history_equal(hist, exp)
+
+        hist = ex.get_history(verbose=False)
+        assert_history_equal(hist, exp)
+
+        hist = ex.get_history(verbose=True)
+        exp = pd.DataFrame({'a': [1, 3],
+                            'Result': [3, 7],
                             'Result Type': ["<class 'int'>"] * 2,
                             'Success': [True, True],
                             'Description': [np.nan, np.nan]},
                            index=pd.Index([1, 2], name='Trial ID'),
                            columns=['a', 'Result', 'Result Type',
                                     'Success', 'Description'])
-        assert_history_equal(hist, exp)
+        assert_history_equal(hist, exp, verbose=True)
 
         ex._delete_cache()
 
@@ -264,6 +317,19 @@ class ExperimentBase(object):
         exp_err = 'ZeroDivisionError(division by zero)'
         exp = pd.DataFrame({'a': [1, 2, 0],
                             'Result': [3.0, 1.5, np.nan],
+                            'Success': [True, True, False],
+                            'Description': [np.nan, np.nan, exp_err]},
+                           index=pd.Index([1, 2, 3], name='Trial ID'),
+                           columns=['a', 'Result',
+                                    'Success', 'Description'])
+        assert_history_equal(hist, exp)
+
+        hist = ex.get_history(verbose=False)
+        assert_history_equal(hist, exp)
+
+        hist = ex.get_history(verbose=True)
+        exp = pd.DataFrame({'a': [1, 2, 0],
+                            'Result': [3.0, 1.5, np.nan],
                             'Result Type': ["<class 'float'>",
                                             "<class 'float'>",
                                             "None"],
@@ -272,7 +338,7 @@ class ExperimentBase(object):
                            index=pd.Index([1, 2, 3], name='Trial ID'),
                            columns=['a', 'Result', 'Result Type',
                                     'Success', 'Description'])
-        assert_history_equal(hist, exp)
+        assert_history_equal(hist, exp, verbose=True)
 
         ex._delete_cache()
 
@@ -346,13 +412,24 @@ class ExperimentBase(object):
 
         hist = ex.get_history()
         exp = pd.DataFrame({'Result': [2, 3],
+                            'Success': [True, True],
+                            'Description': [np.nan, np.nan]},
+                           index=pd.Index([1, 2], name='Trial ID'),
+                           columns=['Result', 'Success', 'Description'])
+        assert_history_equal(hist, exp)
+
+        hist = ex.get_history(verbose=False)
+        assert_history_equal(hist, exp)
+
+        hist = ex.get_history(verbose=True)
+        exp = pd.DataFrame({'Result': [2, 3],
                             'Result Type': ["<class 'int'>"] * 2,
                             'Success': [True, True],
                             'Description': [np.nan, np.nan]},
                            index=pd.Index([1, 2], name='Trial ID'),
                            columns=['Result', 'Result Type',
                                     'Success', 'Description'])
-        assert_history_equal(hist, exp)
+        assert_history_equal(hist, exp, verbose=True)
 
         # current trial id is not accessible outside of the trial
         with pytest.raises(TrialIDNotFoundError):

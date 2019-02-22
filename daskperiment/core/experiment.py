@@ -406,17 +406,23 @@ class Experiment(object):
     # History management
     ##########################################################
 
-    def get_history(self):
+    def get_history(self, verbose=False):
         """
         Return a trial history of the experiment.
 
         It stores trial parameters and its results and related information.
 
+        Prameters
+        ---------
+        verbose: bool, optinal
+           Whether to include detailed info (Seed and Result Type).
+           Default False.
+
         Returns
         -------
         DataFrame: history
         """
-        return self._trials.get_history()
+        return self._trials.get_history(verbose=verbose)
 
     def _save_persist(self, step, result):
         trial_id = self._trials.current_trial_id

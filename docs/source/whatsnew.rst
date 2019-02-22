@@ -1,6 +1,14 @@
 What's new
 ==========
 
+v0.x.x
+------
+
+Enhancement
+^^^^^^^^^^^
+
+* Added `verbose` option to `Experiment.get_history` (default `False`)
+
 v0.3.0
 ------
 

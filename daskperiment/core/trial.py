@@ -147,14 +147,18 @@ class _TrialManager(object):
             result = result.to_dict()
         self._save_history(result)
 
-    def get_history(self):
+    def get_history(self, verbose=False):
         params = self.get_parameter_history()
         history = self.get_result_history()
 
         parameters = pd.DataFrame.from_dict(params,
                                             orient='index')
-        result_index = ['Seed', 'Result', 'Result Type', 'Success',
-                        'Finished', 'Process Time', 'Description']
+        if verbose:
+            result_index = ['Seed', 'Result', 'Result Type', 'Success',
+                            'Finished', 'Process Time', 'Description']
+        else:
+            result_index = ['Result', 'Success', 'Finished',
+                            'Process Time', 'Description']
         result_index = pd.Index(result_index, name='Trial ID')
         # pandas 0.22 or earlier does't support columns kw
         results = pd.DataFrame.from_dict(history,
