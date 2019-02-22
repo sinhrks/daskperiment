@@ -89,12 +89,12 @@ Information                        Format     Key
 Experiment status (internal state) Text       <experiment id>:trial_id
 Experiment history (parameters)    Pickle     <experiment id>:parameter:<trial id>
 Experiment history (results)       Pickle     <experiment id>:history:<trial id>
-Persisted results                  Pickle     <experiment_id>:persist:<function name>:<trial id>
+Persisted results                  Pickle     <experiment id>:persist:<function name>:<trial id>
 Metrics                            Pickle     <experiment id>:metric:<metric name>:<trial id>
 Function input & output hash       Text       <experiment id>:step_hash:<function name>-<input hash>
-Code contexts                      Text       <experiment_id>:code:<trial id>
-Platform information               Text(JSON) <experiment_id>:device:<trial id>
-Python information                 Text(JSON) <experiment_id>:python:<trial id>
-Git information                    Text(JSON) <experiment_id>:git:<trial id>
-Python package information         Text       <experiment_id>:requirements:<trial id>
+Code contexts                      Text       <experiment id>:code:<trial id>
+Platform information               Text(JSON) <experiment id>:device:<trial id>
+Python information                 Text(JSON) <experiment id>:python:<trial id>
+Git information                    Text(JSON) <experiment id>:git:<trial id>
+Python package information         Text       <experiment id>:requirements:<trial id>
 ================================== ========== ===================
