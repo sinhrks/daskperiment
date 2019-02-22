@@ -29,7 +29,7 @@ class DaskperimentBoard(object):
         from bokeh.models import ColumnDataSource
         from bokeh.models.widgets import DataTable
 
-        history = self.experiment.get_history()
+        history = self.experiment.get_history(verbose=True)
         history = history.reset_index()
 
         source = ColumnDataSource(history)
