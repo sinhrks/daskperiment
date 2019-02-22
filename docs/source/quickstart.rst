@@ -333,6 +333,8 @@ Because of the code change, it outputs the different results even though its inp
 
    >>> s.compute()
    ...
+   ... [INFO] Random seed is not provided, initialized with generated seed: 1336143935
+   ...
    ... [WARNING] Experiment step result is changed with the same input: (step: calculate_score, args: (7,), kwargs: {})
    ... [INFO] Finished Experiment (trial id=8)
    2.1481070929378823
@@ -346,6 +348,8 @@ To do this, pass `seed` argument to `compute` method. Note that this trial shows
 
    >>> s.compute(seed=1)
    ...
+   ... [INFO] Random seed is initialized with given seed: 1
+   ...
    ... [WARNING] Experiment step result is changed with the same input: (step: calculate_score, args: (7,), kwargs: {})
    ... [INFO] Finished Experiment (trial id=9)
    1.7552163303435249
@@ -355,6 +359,8 @@ Another trial with the same seed doesn't show the warning, because the result is
 .. code-block:: python
 
    >>> s.compute(seed=1)
+   ...
+   ... [INFO] Random seed is initialized with given seed: 1
    ...
    ... [INFO] Finished Experiment (trial id=9)
    1.7552163303435249
