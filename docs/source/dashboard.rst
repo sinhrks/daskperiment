@@ -33,3 +33,5 @@ Access To The Dashboard
 
 After launching the dashboard, open
 `http://localhost:5000/ <http://localhost:5000/>`_ .
+
+.. image:: ./_static/dashboard.png
