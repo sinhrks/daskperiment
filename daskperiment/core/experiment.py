@@ -20,6 +20,9 @@ logger = get_logger(__name__)
 
 
 class ExperimentFunction(DelayedLeaf):
+    """
+    Delayed function created with `Experiment.__call__` decorator.
+    """
     __slots__ = ('_experiment', '_obj', '_key', '_pure', '_nout')
 
     def __init__(self, experiment, dask_obj):
@@ -32,6 +35,9 @@ class ExperimentFunction(DelayedLeaf):
 
 
 class ResultFunction(ExperimentFunction):
+    """
+    Delayed function created with `Experiment.result` decorator.
+    """
 
     def __call__(self, *args, **kwargs):
         from dask.delayed import call_function
@@ -41,6 +47,11 @@ class ResultFunction(ExperimentFunction):
 
 
 class Result(Delayed):
+    """
+    Delayed instance corresponding to abstract result.
+    Parameters are NOT resolved in computation graph.
+    """
+
     __slots__ = ('_experiment', '_key', 'dask', '_length')
 
     def __init__(self, experiment, dask_obj):
@@ -51,6 +62,48 @@ class Result(Delayed):
 
         self._experiment._result = True
         self._maybe_file()
+
+    def compute(self, seed=None, **kwargs):
+        # create trial instance actually executed
+        task = TrialTask(self)
+        return task.compute(seed=seed, **kwargs)
+
+    def _maybe_file(self):
+        """
+        Perform computation if experiment script is executed as file
+        """
+        if self._experiment._environment.maybe_file():
+            seed, parameters = parse_command_arguments()
+            self._experiment.set_parameters(**parameters)
+            self.compute(seed=seed)
+
+
+class TrialTask(Delayed):
+    """
+    Delayed instance corresponding to actual trial execution.
+    All parameters are resolved in computation graph.
+    """
+    __slots__ = ('_experiment', '_key', 'dask', '_length')
+
+    def __init__(self, result):
+        assert isinstance(result, Result)
+        self._experiment = result._experiment
+
+        # TODO: key should be uniquified for queueing
+        self._key = result._key
+
+        self.dask = self._resolve_parameters(result.dask)
+        self._length = result._length
+
+    def _resolve_parameters(self, dsk):
+        """
+        Update dask graph resolving parameter value
+        """
+        result = dict(dsk)
+        parameters = self._experiment._parameters.to_dask_dict()
+
+        result.update(parameters)
+        return result
 
     def compute(self, seed=None, **kwargs):
         # increment trial id before experiment start
@@ -64,6 +117,7 @@ class Result(Delayed):
             exp._save_experiment_step()
 
             result = super().compute(**kwargs)
+
             exp._finish_experiment_step(result=result, success=True,
                                         description=np.nan, seed=seed)
             return result
@@ -73,15 +127,6 @@ class Result(Delayed):
             exp._finish_experiment_step(result=None, success=False,
                                         description=description, seed=seed)
             raise
-
-    def _maybe_file(self):
-        """
-        Perform computation if experiment script is executed as file
-        """
-        if self._experiment._environment.maybe_file():
-            seed, parameters = parse_command_arguments()
-            self._experiment.set_parameters(**parameters)
-            self.compute(seed=seed)
 
 
 def wrap_result(experiment, func, persist=False):

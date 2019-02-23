@@ -22,57 +22,77 @@ class Undefined(object):
 
 
 class Parameter(Delayed):
-    __slots__ = ('_experiment', '_name', '_key', 'dask', '_length')
+    __slots__ = ('_name', '_key', 'dask', '_length', '_value')
 
-    def __init__(self, experiment, name, length=None):
-        self._experiment = experiment
-
+    def __init__(self, name, length=None):
         # parameter representation name, like "a"
         self._name = name
         # parameter with token, like "a-xxxx"
         self._key = name + "-" + tokenize(name)
+
+        # for Parameter.compute()
         self.dask = {self._key: (self.resolve, )}
+
         self._length = length
+        self._value = Undefined()
 
     def __repr__(self):
-        val = self._experiment._parameters[self._name]
-        if isinstance(val, Undefined):
-            return 'Parameter({}: {})'.format(self._name, val)
+        if self.is_undefined:
+            typ = ''
         else:
-            return 'Parameter({}: {}{})'.format(self._name, val, type(val))
+            typ = type(self._value)
 
-    def resolve(self):
-        try:
-            param = self._experiment._parameters[self._name]
-            if isinstance(param, Undefined):
-                raise ParameterUndefinedError(self._name)
-            return param
-        except KeyError:
-            raise ParameterUndeclaredError(self._name)
+        return 'Parameter({}: {}{})'.format(self._name, self._value, typ)
+
+    def summarize(self):
+        """
+        Return name=value format str
+        """
+        if self.is_undefined:
+            typ = ''
+        else:
+            typ = type(self._value)
+
+        return '{}={}{}'.format(self._name, self._value, typ)
+
+    def set(self, value):
+        """
+        Set value to myself
+        """
+        self._value = value
+
+    @property
+    def is_undefined(self):
+        return isinstance(self._value, Undefined)
+
+    def resolve(self, allow_undefined=False):
+        if not allow_undefined and self.is_undefined:
+            raise ParameterUndefinedError(self._name)
+        return self._value
 
 
 class ParameterManager(object):
 
-    def __init__(self, **kwargs):
-        self._parameters = kwargs
-
-    def copy(self):
-        return ParameterManager(**self._parameters)
+    def __init__(self):
+        self._parameters = {}
 
     def describe(self):
-        def _format(k, v):
-            # TODO: pretty print for long input
-            if not isinstance(v, Undefined):
-                return '{}={}{}'.format(k, v, type(v))
-            else:
-                return '{}={}'.format(k, v)
-
-        params = [_format(k, v)
-                  for k, v in self._parameters.items()]
+        # TODO: pretty print for long input
+        params = [p.summarize() for p in self._parameters.values()]
         return ', '.join(params)
 
     def to_dict(self):
-        return dict(self._parameters)
+        """
+        Return dict of parameter name and its value
+        """
+        return {k: v.resolve(allow_undefined=True)
+                for k, v in self._parameters.items()}
+
+    def to_dask_dict(self):
+        """
+        Return dict to update dask graph
+        """
+        return {v._key: v.resolve() for v in self._parameters.values()}
 
     def define(self, name, default=None):
         """"
@@ -81,14 +101,13 @@ class ParameterManager(object):
         if name in self._parameters:
             msg = 'Re-defining existing parameter: {}'
             logger.debug(msg.format(name))
+            return self._parameters[name]
         else:
-            if default is None:
-                self._parameters[name] = Undefined()
-            else:
-                self._parameters[name] = default
-        # resolve_parameter returns a function to resolve parameter
-        # otherwise parameter name collides in arg and dask_key_name
-        return Parameter(self, name)
+            p = Parameter(name)
+            if default is not None:
+                p.set(default)
+            self._parameters[name] = p
+        return p
 
     def set(self, **kwargs):
         """"
@@ -96,7 +115,7 @@ class ParameterManager(object):
         """
         for name, value in kwargs.items():
             if name in self._parameters:
-                self._parameters[name] = value
+                self._parameters[name].set(value)
             else:
                 raise ParameterUndeclaredError(name)
 
@@ -105,8 +124,8 @@ class ParameterManager(object):
 
     def _check_all_defined(self):
         undefined = []
-        for k, v in self._parameters.items():
-            if isinstance(v, Undefined):
+        for k, p in self._parameters.items():
+            if p.is_undefined:
                 undefined.append(k)
 
         if len(undefined) > 0:
