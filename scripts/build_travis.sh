@@ -17,6 +17,7 @@ source activate myenv
 conda install openblas
 conda install numpy "pandas=$PANDAS" "dask=$DASK"
 
+python -m pip install -r requirements.txt
 python -m pip install -r requirements_test.txt
 python -m pip install pytest pytest-cov codecov
 python -m pip install flake8

@@ -1,5 +1,6 @@
 import pytest
 
+import os
 import subprocess
 import sys
 
@@ -12,10 +13,12 @@ import daskperiment.testing
 
 class TestCommand(object):
 
+    exe = os.path.join(sys.prefix, 'bin', 'python')
+
     def test_simple_experiment_no_params(self):
         file = 'scripts/simple_experiment.py'
 
-        p = subprocess.Popen([sys.executable, file], stdout=subprocess.PIPE)
+        p = subprocess.Popen([self.exe, file], stdout=subprocess.PIPE)
         stdout, stderr = p.communicate()
         assert p.returncode == 1
 
@@ -31,7 +34,7 @@ class TestCommand(object):
 
         file = 'scripts/simple_experiment.py'
 
-        p = subprocess.Popen([sys.executable, file, 'a=1', 'b=2'],
+        p = subprocess.Popen([self.exe, file, 'a=1', 'b=2'],
                              stdout=subprocess.PIPE)
         stdout, stderr = p.communicate()
         assert p.returncode == 0
@@ -44,7 +47,7 @@ class TestCommand(object):
                            index=pd.Index([1], name='Trial ID'))
         tm.assert_frame_equal(exp[['a', 'b', 'Result']], exp)
 
-        p = subprocess.Popen([sys.executable, file, 'a=3', 'b=5'],
+        p = subprocess.Popen([self.exe, file, 'a=3', 'b=5'],
                              stdout=subprocess.PIPE)
         stdout, stderr = p.communicate()
         assert p.returncode == 0
@@ -64,12 +67,12 @@ class TestCommand(object):
     def test_random_experiment_no_params(self):
         file = 'scripts/random_experiment.py'
 
-        p = subprocess.Popen([sys.executable, file], stdout=subprocess.PIPE)
+        p = subprocess.Popen([self.exe, file], stdout=subprocess.PIPE)
         stdout, stderr = p.communicate()
         assert p.returncode == 0
 
         # provide seed
-        p = subprocess.Popen([sys.executable, file, '--seed', '1'],
+        p = subprocess.Popen([self.exe, file, '--seed', '1'],
                              stdout=subprocess.PIPE)
         stdout, stderr = p.communicate()
         assert p.returncode == 0
@@ -77,7 +80,7 @@ class TestCommand(object):
         # cleanup
         e = daskperiment.Experiment('random_experiment_pj')
         h = e.get_history()
-        print(h)
+
         assert h.loc[1, 'Result'] != 0.5513862488149752
         assert h.loc[2, 'Result'] == 0.5513862488149752
 

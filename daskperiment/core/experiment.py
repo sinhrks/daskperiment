@@ -8,7 +8,7 @@ from dask.delayed import Delayed, DelayedLeaf
 
 from daskperiment.backend import init_backend
 from daskperiment.core.code import CodeManager
-from daskperiment.core.environment import Environment
+from daskperiment.environment.environment import Environment
 from daskperiment.core.errors import TrialIDNotFoundError
 from daskperiment.core.parameter import ParameterManager
 from daskperiment.core.parser import parse_command_arguments
@@ -169,6 +169,12 @@ class Experiment(object):
         self._backend = init_backend(experiment_id=self.id,
                                      backend=backend)
         self._backend = self._backend.load()
+        if self.id != self._backend.experiment_id:
+            # this should not occur if user instanciates incorrect
+            # Backend instance by themselves
+            msg = 'Experiment ID mismatch: instance={}, backend={}'
+            raise ValueError(msg.format(self.id, self._backend.experiment_id))
+
         self._seed = seed
 
         if self.trial_id != 0:
@@ -334,7 +340,7 @@ class Experiment(object):
     # Decorators
     ##########################################################
 
-    def __call__(self, func):
+    def __call__(self, func=None):
         """
         A decorator to declare the function is in experiment step.
 
@@ -349,9 +355,16 @@ class Experiment(object):
         -------
         ExperimentFunction: func
         """
-        return self._build_step(func, persist=False)
 
-    def persist(self, func):
+        def wrap(func):
+            return self._build_step(func, persist=False)
+
+        if func is None:
+            return wrap
+        else:
+            return wrap(func)
+
+    def persist(self, func=None):
         """
         A decorator to declare the function is in experiment step, and
         persists the function's results in each trials.
@@ -367,7 +380,13 @@ class Experiment(object):
         -------
         ExperimentFunction: func
         """
-        return self._build_step(func, persist=True)
+        def wrap(func):
+            return self._build_step(func, persist=True)
+
+        if func is None:
+            return wrap
+        else:
+            return wrap(func)
 
     def _build_step(self, func, persist=False):
         """
@@ -377,7 +396,7 @@ class Experiment(object):
         self._codes.register(func)
         return ExperimentFunction(self, dask_obj)
 
-    def result(self, func):
+    def result(self, func=None):
         """
         A decorator to declare the function is the last experiment step.
 
@@ -395,9 +414,15 @@ class Experiment(object):
         -------
         ResultFunction: func
         """
-        dask_obj = dask.delayed(wrap_result(self, func))
-        self._codes.register(func)
-        return ResultFunction(self, dask_obj)
+        def wrap(func):
+            dask_obj = dask.delayed(wrap_result(self, func))
+            self._codes.register(func)
+            return ResultFunction(self, dask_obj)
+
+        if func is None:
+            return wrap
+        else:
+            return wrap(func)
 
     ##########################################################
     # Run experiment
@@ -572,9 +597,8 @@ class Experiment(object):
             # self._codes.check_code_change(trial_id)
 
             self._environment.check_environment_change(trial_id)
-            self._environment.check_python_packages_change(trial_id)
 
-    def get_environment(self, trial_id=None):
+    def get_environment(self, trial_id=None, category=None):
         """
         Get environment info in the trial.
 
@@ -594,7 +618,8 @@ class Experiment(object):
         """
         if trial_id is not None:
             self._check_trial_id(trial_id)
-        return self._environment.get_environment(trial_id=trial_id)
+        return self._environment.get_environment(trial_id=trial_id,
+                                                 category=category)
 
     def get_python_packages(self, trial_id=None):
         """

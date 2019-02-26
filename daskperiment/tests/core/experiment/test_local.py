@@ -1,8 +1,6 @@
-from .base import ExperimentBase
+from .base import ExperimentBase, ex      # noqa
 
 
 class TestLocalExperiment(ExperimentBase):
 
-    @property
-    def backend(self):
-        return 'local'
+    backend = 'local'

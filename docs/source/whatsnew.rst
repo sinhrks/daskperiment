@@ -8,6 +8,18 @@ Enhancement
 ^^^^^^^^^^^
 
 * Added `verbose` option to `Experiment.get_history` (default `False`)
+* Environment now collects following info:
+
+  * Detailed CPU info with `py-cpuinfo`
+  * `conda info`
+  * `numpy.show_config()`
+  * `scipy.show_config()`
+  * `pandas.show_versions()`
+
+Bug fix
+^^^^^^^
+
+* Log output of number of installed python packages is incorrect
 
 v0.3.0
 ------
