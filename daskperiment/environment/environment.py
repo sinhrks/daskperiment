@@ -36,6 +36,9 @@ class Environment(object):
                            self.python_packages]
         self.mapping = {env.key: env for env in self.collectors}
 
+    def keys(self):
+        return [env.key for env in self.collectors]
+
     def log_environment_info(self):
         for env in self.collectors:
             for line in env.output_init():
@@ -87,7 +90,7 @@ class Environment(object):
     def save(self, trial_id):
         for env in self.collectors:
             key = self.backend.get_environment_key(env.key, trial_id, env.ext)
-            logger.info('Saving {} info: {}'.format(env.key, key))
+            logger.debug('Saving {} info: {}'.format(env.key, key))
             self.backend.save_text(key, env.dumps())
 
     def get_environment(self, trial_id=None, category=None):
