@@ -38,7 +38,6 @@ class ResultFunction(ExperimentFunction):
     """
     Delayed function created with `Experiment.result` decorator.
     """
-
     def __call__(self, *args, **kwargs):
         from dask.delayed import call_function
         res = call_function(self._obj, self._key, args, kwargs,
@@ -61,16 +60,16 @@ class Result(Delayed):
         self._length = dask_obj._length
 
         self._experiment._result = True
-        self._maybe_file()
+        self._compute_maybe_file()
 
     def compute(self, seed=None, **kwargs):
         # create trial instance actually executed
         task = TrialTask(self)
         return task.compute(seed=seed, **kwargs)
 
-    def _maybe_file(self):
+    def _compute_maybe_file(self):
         """
-        Perform computation if experiment script is executed as file
+        Perform computation if experiment script is run as file
         """
         if self._experiment._environment.maybe_file():
             seed, parameters = parse_command_arguments()
@@ -99,6 +98,7 @@ class TrialTask(Delayed):
         """
         Update dask graph resolving parameter value
         """
+        # TODO: handle HighLevelGraph without converting to dict?
         result = dict(dsk)
         parameters = self._experiment._parameters.to_dask_dict()
 
@@ -108,25 +108,26 @@ class TrialTask(Delayed):
     def compute(self, seed=None, **kwargs):
         # increment trial id before experiment start
         exp = self._experiment
-        exp._prepare_experiment_step()
 
-        try:
-            logger.info('Target: {}'.format(self._key))
-            seed = exp.set_seed(seed)
-            # save may raise errors
-            exp._save_experiment_step()
+        # when myself is not executable, immediately raise
+        # (do not store history)
+        exp.check_executable()
 
-            result = super().compute(**kwargs)
+        # fix current_trial_id
+        with exp._trials.start(exp, seed=seed) as trial_state:
+            try:
+                # actual computation
+                result = super().compute(**kwargs)
 
-            exp._finish_experiment_step(result=result, success=True,
-                                        description=np.nan, seed=seed)
-            return result
-        except Exception as e:
-            description = '{}({})'.format(e.__class__.__name__, e)
-            logger.error('Experiment failed: {}'.format(description))
-            exp._finish_experiment_step(result=None, success=False,
-                                        description=description, seed=seed)
-            raise
+                trial_state.save_result(result=result, success=True,
+                                        description=np.nan)
+                return result
+            except Exception as e:
+                description = '{}({})'.format(e.__class__.__name__, e)
+                logger.error('Experiment failed: {}'.format(description))
+                trial_state.save_result(result=None, success=False,
+                                        description=description)
+                raise
 
 
 def wrap_result(experiment, func, persist=False):
@@ -135,10 +136,15 @@ def wrap_result(experiment, func, persist=False):
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
+        # execute function
         result = func(*args, **kwargs)
 
+        # TODO: write step log
+
+        # check the function is pure
         experiment._trials.maybe_pure(func, (args, kwargs), result)
 
+        # save if persist
         if persist:
             experiment._save_persist(func.__name__, result)
         return result
@@ -164,7 +170,7 @@ class Experiment(object):
 
     def __init__(self, id, backend='local', seed=None):
         """
-        Automatically load myself if cached pickle file exists
+        Automatically load my backend if exists
         """
         self._backend = init_backend(experiment_id=self.id,
                                      backend=backend)
@@ -299,36 +305,9 @@ class Experiment(object):
             self._check_trial_id(trial_id)
             return self._trials.load_parameters(trial_id)
 
-    def set_seed(self, seed=None):
-        if seed is None:
-            # use experiment default
-            seed = self._seed
-
-        if seed is None:
-            # If seed is not provided, generate new seed
-            seed = np.random.randint(2 ** 32 - 1)
-            msg = ('Random seed is not provided, '
-                   'initialized with generated seed: {}')
-            logger.info(msg.format(seed))
-        else:
-            msg = ('Random seed is initialized with given seed: {}')
-            logger.info(msg.format(seed))
-
-        import random
-        random.seed(seed)
-        np.random.seed(seed)
-        return seed
-
     ##########################################################
-    # Save / load myself
+    # Testing
     ##########################################################
-
-    def _save(self):
-        """
-        Save current state to backend. This is automatically called when
-        Result.compute() is called.
-        """
-        self._backend.save()
 
     def _delete_cache(self):
         """
@@ -428,33 +407,19 @@ class Experiment(object):
     # Run experiment
     ##########################################################
 
-    def _prepare_experiment_step(self):
-        """
-        Start a trial
-        """
-        # when myself is not executable, immediately raise
-        # (do not store history)
-        self.check_executable()
-
-        # TODO: rethinking order
-        self._trials.start_trial()
-
-    def _save_experiment_step(self):
+    def _save_experiment_step(self, trial_id):
         """
         Save the trial info
         """
-        trial_id = self._trials.current_trial_id
-        self._trials.save_parameters(self._parameters)
+        self._trials.save_parameters(trial_id, self._parameters)
         self._codes.save(trial_id)
         self._environment.save(trial_id)
 
-    def _finish_experiment_step(self, result, success, description, seed):
+    def _save_backend(self):
         """
-        Finish the trial
+        Save Backend
         """
-        self._trials.finish_trial(result=result, success=success,
-                                  description=description, seed=seed)
-        self._save()
+        return self._backend.save()
 
     def _check_trial_id(self, trial_id):
         if not isinstance(trial_id, int):

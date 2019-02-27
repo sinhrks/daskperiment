@@ -1,4 +1,5 @@
-from .base import ExperimentBase, ex      # noqa
+from .base import ExperimentBase
+from daskperiment.testing import ex       # noqa
 
 
 class TestLocalExperiment(ExperimentBase):

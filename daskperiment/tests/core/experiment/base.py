@@ -11,7 +11,7 @@ from daskperiment.backend import LocalBackend
 from daskperiment.core.errors import LockedTrialError, TrialIDNotFoundError
 
 
-def assert_history_equal(df, exp, verbose=False):
+def assert_history_equal(df, exp, verbose=False, check_dtype=True):
     if verbose:
         exp_index = ['Seed', 'Result', 'Result Type', 'Success', 'Finished',
                      'Process Time', 'Description']
@@ -21,20 +21,8 @@ def assert_history_equal(df, exp, verbose=False):
                      'Process Time', 'Description']
         dropper = ['Finished', 'Process Time']
     tm.assert_index_equal(df.columns[-len(exp_index):], pd.Index(exp_index))
-    tm.assert_frame_equal(df.drop(dropper, axis=1), exp)
-
-
-@pytest.fixture
-def ex(request):
-    """
-    Initialize and cleanup Experiment
-    """
-    name = request.function.__name__
-    backend = request.cls.backend
-
-    ex = daskperiment.Experiment(id=name, backend=backend)
-    yield ex
-    ex._delete_cache()
+    tm.assert_frame_equal(df.drop(dropper, axis=1), exp,
+                          check_dtype=check_dtype)
 
 
 class ExperimentBase(object):
@@ -83,6 +71,7 @@ class ExperimentBase(object):
 
     def test_parameter_undefined(self, ex):
         a = ex.parameter('a')
+        trial_id = ex.trial_id
 
         @ex.result
         def inc(a):
@@ -93,6 +82,27 @@ class ExperimentBase(object):
         with pytest.raises(daskperiment.core.errors.ParameterUndefinedError,
                            match='Parameters are not defined'):
             res.compute()
+
+        # trial id should not be incremented
+        assert trial_id == ex.trial_id
+
+    def test_empty_history(self, ex):
+        a = ex.parameter('a')
+
+        @ex.result
+        def inc(a):
+            return a + 1
+
+        res = inc(a)
+
+        with pytest.raises(daskperiment.core.errors.ParameterUndefinedError,
+                           match='Parameters are not defined'):
+            res.compute()
+
+        hist = ex.get_history()
+        exp = pd.DataFrame(index=pd.Index([], name='Trial ID'),
+                           columns=['Result', 'Success', 'Description'])
+        assert_history_equal(hist, exp, check_dtype=False)
 
     def test_parameter_default(self, ex):
         a = ex.parameter('a', default=2)
