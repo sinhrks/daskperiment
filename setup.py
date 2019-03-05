@@ -9,7 +9,7 @@ PACKAGE = 'daskperiment'
 README = 'README.rst'
 REQUIREMENTS = 'requirements.txt'
 
-VERSION = '0.4.0'
+VERSION = '0.4.1.dev0'
 
 DESCRIPTION = ('A lightweight tool to perform reproducible machine learning '
                'experiment using Dask.')
