@@ -1,5 +1,8 @@
 import pytest
 
+import os
+import time
+
 import daskperiment
 from daskperiment.environment.git import GitEnvironment
 
@@ -22,6 +25,15 @@ class TestGitEnvironment(object):
                'Git Active Branch': env.branch,
                'Git HEAD Commit': env.commit,
                'Git Dirty Flag': env.is_dirty}
+        assert env.__json__() == exp
+
+    def test_not_git_dict(self):
+        env = GitEnvironment('..')
+        exp = {'Working Directory': '..',
+               'Git Repository': 'Not Git Controlled',
+               'Git Active Branch': 'Not Git Controlled',
+               'Git HEAD Commit': 'Not Git Controlled',
+               'Git Dirty Flag': False}
         assert env.__json__() == exp
 
     @pytest.mark.skipif(not daskperiment.testing.IS_TRAVIS,
@@ -56,10 +68,27 @@ class TestGitEnvironment(object):
                'Git HEAD Commit: {}'.format(env.commit)]
         assert env.output_init() == exp
 
+    def test_not_git_output(self):
+        env = GitEnvironment('..')
+        exp = ['Git Repository: Not Git Controlled',
+               'Git Active Branch: Not Git Controlled',
+               'Git HEAD Commit: Not Git Controlled']
+        assert env.output_init() == exp
+
     def test_git_output_dirty(self):
+        dirty = os.path.join(os.path.dirname(__file__),
+                             'data', 'dirty.txt')
+        with open(dirty, mode='w') as f:
+            f.write('dirty')
+        # wait until file is written
+        time.sleep(0.5)
+
         env = GitEnvironment()
-        env.is_dirty = True
+        assert env.is_dirty
         exp = ['Git Repository: {}'.format(env.repository),
                'Git Active Branch: {}'.format(env.branch),
                'Git HEAD Commit: {} (DIRTY)'.format(env.commit)]
         assert env.output_init() == exp
+
+        with open(dirty, mode='w') as f:
+            f.write('A file to make repository dirty.')
