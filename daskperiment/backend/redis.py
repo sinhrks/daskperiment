@@ -84,18 +84,9 @@ class RedisBackend(_BaseBackend):
         """
         return '{}:code:{}'.format(self.experiment_id, trial_id)
 
-    def get_python_package_key(self, trial_id):
-        return '{}:requirements:{}'.format(self.experiment_id, trial_id)
-
     def get_environment_key(self, env_key, trial_id, ext):
         # ext is used in LocalBackend
         return '{}:{}:{}'.format(self.experiment_id, env_key, trial_id)
-
-    def get_python_info_key(self, trial_id):
-        return '{}:python:{}'.format(self.experiment_id, trial_id)
-
-    def get_git_info_key(self, trial_id):
-        return '{}:git:{}'.format(self.experiment_id, trial_id)
 
     def get_trial_id_from_key(self, key):
         assert isinstance(key, (str, bytes)), key
