@@ -1,3 +1,6 @@
+import threading
+
+import numpy as np
 import pandas as pd
 
 from daskperiment.core.errors import (LockedTrialError,
@@ -43,35 +46,119 @@ class TrialResult(object):
         return record
 
 
+class TrialState(object):
+    """
+    A class represents a single trial state during execution
+    """
+    def __init__(self, trial_id, experiment, seed=None):
+        self._current_trial_id = trial_id
+        self.experiment = experiment
+        self.seed = seed
+        self._running = False
+
+    @property
+    def current_trial_id(self):
+        # read-only
+        if self._running:
+            return self._current_trial_id
+        else:
+            msg = "Current Trial ID only exists during a trial execution"
+            raise TrialIDNotFoundError(msg)
+
+    def __enter__(self):
+        self._running = True
+
+        self._start_time = pd.Timestamp.now()
+        msg = 'Started Experiment (trial id={})'
+        logger.info(msg.format(self.current_trial_id))
+
+        self.experiment._save_experiment_step(self.current_trial_id)
+        self.set_seed()
+
+        return self
+
+    def __exit__(self, ex_type, ex_value, trace):
+        # exception must be handled in with block
+        msg = 'Finished Experiment (trial id={})'
+        logger.info(msg.format(self.current_trial_id))
+
+        self.experiment._save_backend()
+        self.experiment._trials.unlock()
+        self._running = False
+
+        return False
+
+    def set_seed(self):
+        if self.seed is None:
+            # use experiment default
+            self.seed = self.experiment._seed
+
+        if self.seed is None:
+            # If seed is not provided, generate new seed
+            self.seed = np.random.randint(2 ** 32 - 1)
+            msg = ('Random seed is not provided, '
+                   'initialized with generated seed: {}')
+            logger.info(msg.format(self.seed))
+        else:
+            msg = ('Random seed is initialized with given seed: {}')
+            logger.info(msg.format(self.seed))
+
+        import random
+        random.seed(self.seed)
+        np.random.seed(self.seed)
+        return self.seed
+
+    def save_result(self, result, success, description):
+        end_time = pd.Timestamp.now()
+        record = TrialResult(result=result, success=success,
+                             finished=end_time,
+                             process_time=end_time - self._start_time,
+                             description=description, seed=self.seed)
+        self.experiment._trials.save_result(self.current_trial_id, record)
+
+
 class _TrialManager(object):
-
-    __lock = False
-
+    """
+    A class to manage trial_id and history
+    """
     def __init__(self, backend):
         self.backend = backend
+
+    def __getstate__(self):
+        # do not modify my __dict__
+        state = self.__dict__.copy()
+        # do not pickle threading Lock
+        state.pop('_lock_obj', None)
+        state.pop('_lock_owner', None)
+        return state
+
+    @property
+    def _lock(self):
+        if not hasattr(self, '_lock_obj'):
+            self._lock_obj = threading.Lock()
+            self._lock_owner = threading.current_thread()
+        return self._lock_obj
 
     def is_locked(self):
         """
         Check whether myself is locked. IOW, whether the trial is
         being executed or not.
         """
-        return self.__lock
+        return self._lock.locked()
 
     def lock(self):
         """
         Lock myself and guarantee the same Trial ID is returned during a
         single trial. Note that it doesn't lock backend (db, file, etc)
         """
-        if self.is_locked():
-            msg = 'Trial is already locked'
-            raise LockedTrialError(msg)
-        self.__lock = True
+        self._lock.acquire()
+        self._lock_owner = threading.current_thread()
 
     def unlock(self):
         """
         Unlock myself.
         """
-        self.__lock = False
+        self._lock.release()
 
     def increment(self):
         """
@@ -84,31 +171,20 @@ class _TrialManager(object):
     @property
     def current_trial_id(self):
         if self.is_locked():
+            # TODO: is locked by myself?
             return self._current_trial_id
         else:
             msg = "Current Trial ID only exists during a trial execution"
             raise TrialIDNotFoundError(msg)
 
-    def start_trial(self):
-        # increment trial id BEFORE experiment start
-        self.increment()
+    def start(self, experiment, seed=None):
+        # increment trial id BEFORE experiment start lock myself
+        trial_id = self.increment()
+        return TrialState(trial_id, experiment, seed=seed)
 
-        self._start_time = pd.Timestamp.now()
-        msg = 'Started Experiment (trial id={})'
-        logger.info(msg.format(self.current_trial_id))
-
-    def finish_trial(self, result, success, description, seed):
-        end_time = pd.Timestamp.now()
-        record = TrialResult(result=result, success=success,
-                             finished=end_time,
-                             process_time=end_time - self._start_time,
-                             description=description, seed=seed)
-        self.save_history(record)
-
-        msg = 'Finished Experiment (trial id={})'
-        logger.info(msg.format(self.current_trial_id))
-
-        self.unlock()
+    ##########################################################
+    # Step Management
+    ##########################################################
 
     def maybe_pure(self, func, inputs, result):
         """
@@ -135,17 +211,21 @@ class _TrialManager(object):
             logger.warning(msg.format(func.__name__, args, kwargs))
         return maybe_pure
 
-    def save_parameters(self, params):
+    ##########################################################
+    # Trial Management
+    ##########################################################
+
+    def save_parameters(self, trial_id, params):
         if isinstance(params, ParameterManager):
             logger.info('Parameters: {}'.format(params.describe()))
             params = params.to_dict()
         # TODO raise otherwise
-        return self._save_parameters(params)
+        return self._save_parameters(trial_id, params)
 
-    def save_history(self, result):
+    def save_result(self, trial_id, result):
         if isinstance(result, TrialResult):
             result = result.to_dict()
-        self._save_history(result)
+        self._save_result(trial_id, result)
 
     def get_history(self, verbose=False):
         params = self.get_parameter_history()
@@ -196,14 +276,14 @@ class LocalTrialManager(_TrialManager):
         self._trial_id += 1
         return self._trial_id
 
-    def _save_parameters(self, params):
-        self._parameters_history[self.current_trial_id] = params
+    def _save_parameters(self, trial_id, params):
+        self._parameters_history[trial_id] = params
 
     def load_parameters(self, trial_id):
         return self._parameters_history[trial_id]
 
-    def _save_history(self, params):
-        self._result_history[self.current_trial_id] = params
+    def _save_result(self, trial_id, params):
+        self._result_history[trial_id] = params
 
     def get_parameter_history(self):
         return self._parameters_history.copy()
@@ -261,19 +341,19 @@ class RedisTrialManager(_TrialManager):
     def get_history_key(self, trial_id):
         return '{}:history:{}'.format(self.experiment_id, trial_id)
 
-    def _save_parameters(self, params):
+    def _save_parameters(self, trial_id, params):
         # TODO : how to distinguish Undefined and nan?
         params = {k: v for k, v in params.items()
                   if not isinstance(v, Undefined)}
-        key = self.get_parameter_key(self.current_trial_id)
+        key = self.get_parameter_key(trial_id)
         self.backend.save_object(key, params)
 
     def load_parameters(self, trial_id):
         key = self.get_parameter_key(trial_id)
         return self.backend.load_object(key)
 
-    def _save_history(self, params):
-        key = self.get_history_key(self.current_trial_id)
+    def _save_result(self, trial_id, params):
+        key = self.get_history_key(trial_id)
         self.backend.save_object(key, params)
 
     def get_parameter_history(self):

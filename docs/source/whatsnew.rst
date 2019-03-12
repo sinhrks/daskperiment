@@ -7,6 +7,17 @@ v0.x.x
 Enhancement
 ^^^^^^^^^^^
 
+Bug fix
+^^^^^^^
+
+* Trial result may be incorrect if it is ran from multiple threads
+
+v0.4.0
+------
+
+Enhancement
+^^^^^^^^^^^
+
 * Added `verbose` option to `Experiment.get_history` (default `False`)
 * Environment now collects following info:
 

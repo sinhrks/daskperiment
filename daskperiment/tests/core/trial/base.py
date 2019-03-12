@@ -28,12 +28,6 @@ class TrialManagerBase(object):
         with pytest.raises(daskperiment.core.errors.LockedTrialError):
             t.trial_id
 
-        with pytest.raises(daskperiment.core.errors.LockedTrialError):
-            t.lock()
-
-        with pytest.raises(daskperiment.core.errors.LockedTrialError):
-            t.increment()
-
         t.unlock()
         assert not t.is_locked()
         assert t.trial_id == base + 1
@@ -60,16 +54,16 @@ class TrialManagerBase(object):
 
     def test_parameters(self):
         t = self.trials
-        t.increment()
-        trial_id = t.current_trial_id
+        trial_id = t.increment()
+        assert trial_id == t.current_trial_id
 
-        t.save_parameters(params=dict(a=1, b=1))
+        t.save_parameters(trial_id, params=dict(a=1, b=1))
         t.unlock()
 
         res = t.increment()
         assert res == trial_id + 1
 
-        t.save_parameters(params=dict(a=1, b='xx'))
+        t.save_parameters(res, params=dict(a=1, b='xx'))
         t.unlock()
 
         assert t.load_parameters(trial_id) == dict(a=1, b=1)
@@ -77,36 +71,36 @@ class TrialManagerBase(object):
 
     def test_parameters_types(self):
         t = self.trials
-        t.increment()
-        trial_id = t.current_trial_id
+        trial_id = t.increment()
+        assert trial_id == t.current_trial_id
 
         params = dict(a=True, b=pd.Timestamp('2011-01-01'),
                       c=pd.Timedelta('1 days'))
-        t.save_parameters(params=params)
+        t.save_parameters(trial_id, params=params)
         t.unlock()
 
         res = t.increment()
         assert res == trial_id + 1
 
-        t.save_parameters(params=dict(a=1, b='xx'))
+        t.save_parameters(res, params=dict(a=1, b='xx'))
 
         assert t.load_parameters(trial_id) == params
         assert t.load_parameters(trial_id + 1) == dict(a=1, b="xx")
 
     def test_history_types(self):
         t = self.trials
-        t.increment()
-        trial_id = t.current_trial_id
+        trial_id = t.increment()
+        assert trial_id == t.current_trial_id
 
         params = dict(a=True, b=pd.Timestamp('2011-01-01'),
                       c=pd.Timedelta('1 days'))
-        t.save_history(params)
+        t.save_result(trial_id, params)
         t.unlock()
 
         res = t.increment()
         assert res == trial_id + 1
 
-        t.save_history(dict(a=1, b='xx'))
+        t.save_result(res, dict(a=1, b='xx'))
 
         history = t.get_result_history()
         assert isinstance(history, dict), history
