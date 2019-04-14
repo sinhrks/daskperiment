@@ -46,7 +46,8 @@ class RedisBackend(_NoSQLBackend):
         return self.client.get(key)
 
     def keys(self, key):
-        return self.client.keys(key)
+        keys = self.client.keys(key)
+        return [key.decode('utf-8') for key in keys]
 
     def append_list(self, key, value):
         return self.client.rpush(key, value)
