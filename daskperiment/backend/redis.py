@@ -58,4 +58,4 @@ class RedisBackend(_NoSQLBackend):
         return self.client.incr(key)
 
     def _delete_cache(self):
-        self.client.flushall()
+        self.client.flushdb()
