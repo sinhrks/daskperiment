@@ -201,9 +201,9 @@ class _TrialManager(object):
         input_hash = get_hash(*args, **kwargs)
         output_hash = get_hash(result)
 
-        key = func.__name__ + '-' + input_hash
+        input_key = func.__name__ + '-' + input_hash
 
-        previous_hash = self._update_step_hash(key, output_hash)
+        previous_hash = self._update_step_hash(input_key, output_hash)
         maybe_pure = (output_hash == previous_hash)
         if not maybe_pure:
             msg = ('Experiment step result is changed with the same input: '
@@ -303,11 +303,7 @@ class LocalTrialManager(_TrialManager):
         return previous_hash
 
 
-class RedisTrialManager(_TrialManager):
-
-    @property
-    def client(self):
-        return self.backend.client
+class NoSQLTrialManager(_TrialManager):
 
     @property
     def experiment_id(self):
@@ -315,7 +311,7 @@ class RedisTrialManager(_TrialManager):
 
     @property
     def _trial_id_key(self):
-        return '{}:trial_id'.format(self.experiment_id)
+        return self.backend.build_key(self.experiment_id, 'trial_id')
 
     @property
     def trial_id(self):
@@ -326,59 +322,53 @@ class RedisTrialManager(_TrialManager):
             msg = ('Unable to use TrialManager.trial_id during trial. '
                    'Use .current_trial_id for safety.')
             raise LockedTrialError(msg)
-        res = self.backend.client.get(self._trial_id_key)
+        res = self.backend.get(self._trial_id_key)
         if res is None:
             return 0
         else:
             return int(res)
 
     def _increment(self):
-        return self.client.incr(self._trial_id_key)
-
-    def get_parameter_key(self, trial_id):
-        return '{}:parameter:{}'.format(self.experiment_id, trial_id)
-
-    def get_history_key(self, trial_id):
-        return '{}:history:{}'.format(self.experiment_id, trial_id)
+        return self.backend.increment(self._trial_id_key)
 
     def _save_parameters(self, trial_id, params):
         # TODO : how to distinguish Undefined and nan?
         params = {k: v for k, v in params.items()
                   if not isinstance(v, Undefined)}
-        key = self.get_parameter_key(trial_id)
+        key = self.backend.get_parameter_key(trial_id)
         self.backend.save_object(key, params)
 
     def load_parameters(self, trial_id):
-        key = self.get_parameter_key(trial_id)
+        key = self.backend.get_parameter_key(trial_id)
         return self.backend.load_object(key)
 
     def _save_result(self, trial_id, params):
-        key = self.get_history_key(trial_id)
+        key = self.backend.get_history_key(trial_id)
         self.backend.save_object(key, params)
 
     def get_parameter_history(self):
-        keys = self.client.keys(self.get_parameter_key('*'))
+        keys = self.backend.keys(self.backend.get_parameter_key('*'))
         k = self.backend.get_trial_id_from_key
         return {k(key): self.backend.load_object(key) for key in keys}
 
     def get_result_history(self):
-        keys = self.client.keys(self.get_history_key('*'))
+        keys = self.backend.keys(self.backend.get_history_key('*'))
         k = self.backend.get_trial_id_from_key
         return {k(key): self.backend.load_object(key) for key in keys}
 
-    def _update_step_hash(self, key, output_hash):
+    def _update_step_hash(self, input_hash, output_hash):
         """
         Update the hash result of experiment step. Return previous hash
         if exists.
         """
         # include experiment_id in key
-        key = '{}:step_hash:{}'.format(self.experiment_id, key)
+        key = self.backend.get_step_hash_key(input_hash)
         # return previous hash if exists, otherwise returns current
         try:
-            previous_hash = self.backend.load_text(key)
+            previous_output_hash = self.backend.load_text(key)
         except TrialIDNotFoundError:
             # it doesn't use trial id...
-            previous_hash = output_hash
+            previous_output_hash = output_hash
         # overwrite with current hash
         self.backend.save_text(key, output_hash)
-        return previous_hash
+        return previous_output_hash
