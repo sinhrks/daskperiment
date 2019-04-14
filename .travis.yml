@@ -17,6 +17,7 @@ install:
 
 services:
   - redis-server
+  - mongodb
 
 before_script:
   - "export DISPLAY=:99.0"

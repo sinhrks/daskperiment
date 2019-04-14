@@ -14,7 +14,7 @@ class NoSQLMetricManager(_MetricManager):
         keys = self.backend.keys(key)
 
         sep = self.backend._SEP
-        keys = [k.decode('utf-8').split(sep)[2] for k in keys]
+        keys = [k.split(sep)[2] for k in keys]
         keys = sorted(list(set(keys)))
         return keys
 

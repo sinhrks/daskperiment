@@ -41,6 +41,9 @@ def init_backend(experiment_id=None, backend=None):
     if maybe_redis(backend):
         from daskperiment.backend.redis import RedisBackend
         return RedisBackend(experiment_id, backend)
+    elif maybe_mongo(backend):
+        from daskperiment.backend.mongo import MongoBackend
+        return MongoBackend(experiment_id, backend)
     elif isinstance(backend, pathlib.Path):
         from daskperiment.backend.local import LocalBackend
         return LocalBackend(experiment_id, backend)
@@ -71,6 +74,25 @@ def maybe_redis(uri):
         return False
     protocols = ['redis://', 'rediss://', 'unix://']
     return any(uri.startswith(p) for p in protocols)
+
+
+def maybe_mongo(uri):
+    """
+    Check whether arg should be regarded as MongoDB
+
+    Prameters
+    ---------
+    uri: obj
+       Argument to be distinguished
+
+    Returns
+    -------
+    bool: maybe_mongo
+    """
+    # TODO: handle mongo db instance
+    if not isinstance(uri, str):
+        return False
+    return uri.startswith('mongodb://')
 
 
 class _BaseBackend(object):

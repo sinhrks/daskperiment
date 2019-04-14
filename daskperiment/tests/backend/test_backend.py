@@ -7,7 +7,7 @@ import redis
 
 import daskperiment
 from daskperiment.backend import (init_backend, LocalBackend,
-                                  RedisBackend)
+                                  MongoBackend, RedisBackend)
 
 
 class TestInitBackend(object):
@@ -76,7 +76,19 @@ class TestBackend(object):
         exp = "RedisBackend('redis://localhost:6379/0')"
         assert repr(ex._backend) == exp
 
-    def test_locak_backend_eq(self):
+    def test_mongo_backend(self):
+        backend = 'mongodb://localhost:27017/test_db'
+        ex = daskperiment.Experiment('mongo_backend', backend=backend)
+        assert isinstance(ex._backend, MongoBackend)
+        assert ex._backend.uri == 'mongodb://localhost:27017/test_db'
+
+        exp = "MongoBackend('mongodb://localhost:27017/test_db')"
+        assert repr(ex._backend) == exp
+        assert ex._backend.collection.full_name == 'test_db.mongo_backend'
+        assert ex._backend.collection.database.name == 'test_db'
+        assert ex._backend.dbname == 'test_db'
+
+    def test_local_backend_eq(self):
         r = init_backend('local_backend', backend='local')
         assert r == r
         r2 = init_backend('local_backend', backend='local')
