@@ -37,8 +37,7 @@ class _PanelFactory(object):
         contents = [c for c in [widget, content] if c is not None]
 
         self.layout = layouts.layout(contents)
-        return Panel(child=self.layout, title=self.NAME,
-                     sizing_mode='scale_width')
+        return Panel(child=self.layout, title=self.NAME)
 
 
 class SummaryPanel(_PanelFactory):

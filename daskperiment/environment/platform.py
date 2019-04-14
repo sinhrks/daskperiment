@@ -87,8 +87,8 @@ class DetailedCPUEnvironment(_EnvironmentJsonDataClass):
                 # version-likes
                 value = '.'.join([str(v) for v in value])
             elif isinstance(value, list):
-                # flags
-                value = ','.join(value)
+                # stringify and conat flags
+                value = ','.join([str(v) for v in value])
             setattr(self, key, value)
 
     def output_init(self):

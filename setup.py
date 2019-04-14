@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-#!/usr/bin/env python
-
 import codecs
 import os
 from setuptools import setup, find_packages
@@ -14,9 +11,12 @@ VERSION = '0.4.1.dev0'
 DESCRIPTION = ('A lightweight tool to perform reproducible machine learning '
                'experiment using Dask.')
 
+
 def read(fname):
-  # file must be read as utf-8 in py3 to avoid to be bytes
-  return codecs.open(os.path.join(os.path.dirname(__file__), fname), encoding='utf-8').read()
+    # file must be read as utf-8 in py3 to avoid to be bytes
+    return codecs.open(os.path.join(os.path.dirname(__file__), fname),
+                       encoding='utf-8').read()
+
 
 def write_version_py(filename=None):
     cnt = """\
@@ -27,6 +27,7 @@ version = '%s'
         a.write(cnt % VERSION)
     finally:
         a.close()
+
 
 version_file = os.path.join(os.path.dirname(__file__), PACKAGE, 'version.py')
 write_version_py(filename=version_file)
