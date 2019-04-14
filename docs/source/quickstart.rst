@@ -5,7 +5,7 @@ This section describes a minimal example. First, create `daskperiment.Experiment
 
 .. note::
 
-   Following examples omit unrelated logs.
+   Unrelated logs are omitted in following examples.
 
 .. code-block:: python
 
@@ -28,7 +28,7 @@ Then, use `Experiment.parameter` method to define parameters (input variables fo
    Parameter(a: Undefined)
 
 
-Next, you can define each experiment step (function) by decorating with `Experiment` instance (`@ex`).
+Next, define each experiment step (function) by decorating with `Experiment` instance (`@ex`).
 
 Note that the function to output the final result (mostly objective value to be minimized or maximized) must be decorated with `Experiment.result`. The chain of these functions are expressed as `Dask.Delayed` instance.
 
@@ -57,7 +57,7 @@ Thus, you can visualize computation graph via `.visualize` method.
    >>> s.visualize()
 
 
-Use `Experiment.set_parameters` method to set parameters for a trial. After setting parameters, `Parameter` variable and experiment result will be computable.
+Use `Experiment.set_parameters` method to set parameters for a trial. After setting parameters, `Parameter` variable and experiment result can be computable.
 
 Parameters are recommended to be a scalar (or lightweight value) because these are stored as history (for example, passing filename as a parameter is preffered rather than passing `DataFrame`).
 
@@ -105,7 +105,7 @@ After some trials, you can retrieve parameter values specifying trial id.
    {'a': 1, 'b': 3}
 
 
-`Experiment.get_history` will return a `DataFrame` which stores a history of trial parameters and its results. You can select desirable trial using `pandas` basic operation.
+`Experiment.get_history` returns a `DataFrame` which stores the history of trial parameters and its results. You can select desirable trial using `pandas` basic operation.
 
 
 .. code-block:: python
@@ -147,7 +147,7 @@ Next example shows how to retrieve an intermediate result of the chain.
 
 The only difference is using `Experiment.persist` decorator. It makes `Experiment` instance to keep the decorated function's intermediate result. After definition, rebuilt the same workflow using the persisted function.
 
-Note that an intermediate result is saved as a pickle file named with its function name, function name must be unique in the experiment.
+Note that an intermediate result is saved as a pickle file named with its function name which must be unique in the experiment.
 
 .. code-block:: python
 
@@ -231,7 +231,7 @@ You may need to monitor transition of some metrics during each trial. In each ex
    3.3333333333333335
 
 
-After a trial, you can load saved metric using `Experiment.load_metric` specifying its name and trial_id. As it is returned as `DataFrame`, you can easily investigate it.
+After a trial, you can load saved metric using `Experiment.load_metric` specifying its name and trial_id. As it returns metrics as a `DataFrame`, you can easily investigate them.
 
 .. code-block:: python
 
@@ -275,7 +275,7 @@ Check Code Context
 
 During the trials, `daskperiment` tracks code contexts decorated with `Experiment` decorators.
 
-To check the tracked code contexts, use `Experiment.get_code` specifying trial id (shows current code if trial id is not provided).
+To check the tracked code contexts, use `Experiment.get_code` specifying trial id (if is not specified, it returns current code).
 
 
 .. code-block:: python
@@ -303,15 +303,15 @@ To check the tracked code contexts, use `Experiment.get_code` specifying trial i
    def calculate_score(s):
        return 10 / s
 
-Each code context is also saved as a text file per trial id. Thus, these are easily handled by diff tools and Git.
+Each code context is also saved as a text file per trial id. So it is easy to handle by diff tools and Git.
 
 
 Function Purity And Handling Randomness
 ---------------------------------------
 
-To make the experiment reproducible, all the experiment step should be "pure" function (it the inputs are the same, output shouldn't be changed). In other words, the function should not have internal state nor randomness.
+To make the experiment reproducible, all the experiment step should be "pure" function (it always returns the same outputs if the inputs to it are the same). In other words, the function should not have internal state nor randomness.
 
-`daskperiment` checks whether each experiment step is pure. It internally stores the hash of inputs and output, and shows a warning if its output is changed even though the inputs are unchanged.　
+`daskperiment` checks whether each experiment step is pure. It internally stores the hash of inputs and output, and issues a warning if its output is changed even though the inputs are unchanged.　
 
 To illustrate this, add randomness to the example code.
 
@@ -327,7 +327,7 @@ To illustrate this, add randomness to the example code.
    >>> d = prepare_data(a, b)
    >>> s = calculate_score(d)
 
-Because of the code change, it outputs the different results even though its inputs (parameters) are unchanged. `daskperiment` shows the warning.
+Because of the code change, it outputs the different results even though its inputs (parameters) are the same. In this case, `daskperiment` issuess the warning.
 
 .. code-block:: python
 
@@ -339,10 +339,10 @@ Because of the code change, it outputs the different results even though its inp
    ... [INFO] Finished Experiment (trial id=8)
    2.1481070929378823
 
-The function outputs different result in every trial because of the randomness.
+This function outputs different result in every trial because of the randomness.
 To make the function reproducible, random seed should be provided.
 
-To do this, pass `seed` argument to `compute` method. Note that this trial shows the warning because its result is changed comparing to the previous result (no seed).
+To do this, pass `seed` argument to `compute` method. Note that this trial issue the warning because its result is different to the previous result (no seed).
 
 .. code-block:: python
 
@@ -354,7 +354,7 @@ To do this, pass `seed` argument to `compute` method. Note that this trial shows
    ... [INFO] Finished Experiment (trial id=9)
    1.7552163303435249
 
-Another trial with the same seed doesn't show the warning, because the result is unchanged.
+Another trial with the same seed doesn't issue the warning, because the result is unchanged.
 
 .. code-block:: python
 
@@ -369,7 +369,7 @@ Save Experiment Status
 ----------------------
 
 
-`daskperiment` automatically saves its internal state when the experiment result is computed (when `.compute` is called). Also, `Experiment` instance recovers previous state when it is instanciated.
+`daskperiment` automatically saves its internal state when a experiment result is computed (when `.compute` is called). Also, `Experiment` instance recovers previous state when it is instanciated.
 
 Following example instanciates `Experiment` instance using the same id as above. Thus, the created `Experiment` recovers its previous trial history.
 
