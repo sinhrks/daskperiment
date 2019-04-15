@@ -3,11 +3,10 @@ import threading
 import numpy as np
 import pandas as pd
 
-from daskperiment.core.errors import (LockedTrialError,
-                                      TrialIDNotFoundError)
+from daskperiment.core.errors import TrialIDNotFoundError
 from daskperiment.util.hashing import get_hash
 from daskperiment.util.log import get_logger
-from daskperiment.core.parameter import ParameterManager, Undefined
+from daskperiment.core.parameter import ParameterManager
 
 
 logger = get_logger(__name__)
@@ -247,128 +246,3 @@ class _TrialManager(object):
         results = parameters.join(results, how='right')
         results.index.name = 'Trial ID'
         return results
-
-
-class LocalTrialManager(_TrialManager):
-
-    def __init__(self, backend):
-        super().__init__(backend)
-        self._trial_id = 0
-
-        self._parameters_history = {}
-        self._result_history = {}
-
-        # store function input hash and its output hash
-        self._hashes = {}
-
-    @property
-    def trial_id(self):
-        """
-        Return latest trial ID.
-        """
-        if self.is_locked():
-            msg = ('Unable to use TrialManager.trial_id during trial. '
-                   'Use .current_trial_id for safety.')
-            raise LockedTrialError(msg)
-        return self._trial_id
-
-    def _increment(self):
-        self._trial_id += 1
-        return self._trial_id
-
-    def _save_parameters(self, trial_id, params):
-        self._parameters_history[trial_id] = params
-
-    def load_parameters(self, trial_id):
-        return self._parameters_history[trial_id]
-
-    def _save_result(self, trial_id, params):
-        self._result_history[trial_id] = params
-
-    def get_parameter_history(self):
-        return self._parameters_history.copy()
-
-    def get_result_history(self):
-        return self._result_history.copy()
-
-    def _update_step_hash(self, key, output_hash):
-        """
-        Update the hash result of experiment step. Return previous hash
-        if exists.
-        """
-        # return previous hash if exists, otherwise returns current
-        previous_hash = self._hashes.get(key, output_hash)
-        # overwrite with current hash
-        self._hashes[key] = output_hash
-        return previous_hash
-
-
-class NoSQLTrialManager(_TrialManager):
-
-    @property
-    def experiment_id(self):
-        return self.backend.experiment_id
-
-    @property
-    def _trial_id_key(self):
-        return self.backend.build_key(self.experiment_id, 'trial_id')
-
-    @property
-    def trial_id(self):
-        """
-        Return latest trial ID.
-        """
-        if self.is_locked():
-            msg = ('Unable to use TrialManager.trial_id during trial. '
-                   'Use .current_trial_id for safety.')
-            raise LockedTrialError(msg)
-        res = self.backend.get(self._trial_id_key)
-        if res is None:
-            return 0
-        else:
-            return int(res)
-
-    def _increment(self):
-        return self.backend.increment(self._trial_id_key)
-
-    def _save_parameters(self, trial_id, params):
-        # TODO : how to distinguish Undefined and nan?
-        params = {k: v for k, v in params.items()
-                  if not isinstance(v, Undefined)}
-        key = self.backend.get_parameter_key(trial_id)
-        self.backend.save_object(key, params)
-
-    def load_parameters(self, trial_id):
-        key = self.backend.get_parameter_key(trial_id)
-        return self.backend.load_object(key)
-
-    def _save_result(self, trial_id, params):
-        key = self.backend.get_history_key(trial_id)
-        self.backend.save_object(key, params)
-
-    def get_parameter_history(self):
-        keys = self.backend.keys(self.backend.get_parameter_key('*'))
-        k = self.backend.get_trial_id_from_key
-        return {k(key): self.backend.load_object(key) for key in keys}
-
-    def get_result_history(self):
-        keys = self.backend.keys(self.backend.get_history_key('*'))
-        k = self.backend.get_trial_id_from_key
-        return {k(key): self.backend.load_object(key) for key in keys}
-
-    def _update_step_hash(self, input_hash, output_hash):
-        """
-        Update the hash result of experiment step. Return previous hash
-        if exists.
-        """
-        # include experiment_id in key
-        key = self.backend.get_step_hash_key(input_hash)
-        # return previous hash if exists, otherwise returns current
-        try:
-            previous_output_hash = self.backend.load_text(key)
-        except TrialIDNotFoundError:
-            # it doesn't use trial id...
-            previous_output_hash = output_hash
-        # overwrite with current hash
-        self.backend.save_text(key, output_hash)
-        return previous_output_hash
