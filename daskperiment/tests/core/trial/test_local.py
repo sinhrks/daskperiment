@@ -1,4 +1,4 @@
-from daskperiment.core.trial import LocalTrialManager
+from daskperiment.core.trial.local import LocalTrialManager
 from daskperiment.tests.core.trial.base import TrialManagerBase
 
 

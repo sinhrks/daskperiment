@@ -1,7 +1,7 @@
-from daskperiment.testing import RedisCleanupMixin, ex  # noqa
+from daskperiment.testing import CleanupMixin, ex  # noqa
 from .base import ExperimentBase
 
 
-class TestRedisExperiment(ExperimentBase, RedisCleanupMixin):
+class TestRedisExperiment(ExperimentBase, CleanupMixin):
 
     backend = 'redis://localhost:6379/0'

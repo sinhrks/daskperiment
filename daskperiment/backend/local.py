@@ -19,7 +19,7 @@ class LocalBackend(_BaseBackend):
         from daskperiment.core.metric.local import LocalMetricManager
         self.metrics = LocalMetricManager(backend=self)
 
-        from daskperiment.core.trial import LocalTrialManager
+        from daskperiment.core.trial.local import LocalTrialManager
         self.trials = LocalTrialManager(backend=self)
 
     def initialize_backend(self):
@@ -54,25 +54,23 @@ class LocalBackend(_BaseBackend):
     def persist_dir(self):
         return self.cache_dir / 'persist'
 
-    def get_persist_key(self, step, trial_id):
-        """
-        Get Path instance to save persisted results
-        """
+    ################################################
+    # Key & value management
+    ################################################
+
+    def _get_persist_key(self, step, trial_id):
         fname = '{}_{}_{}.pkl'.format(self.experiment_id, step, trial_id)
         return self.persist_dir / fname
 
-    def get_code_key(self, trial_id):
-        """
-        Get Path instance to save code
-        """
+    def _get_code_key(self, trial_id):
         fname = '{}_{}.py'.format(self.experiment_id, trial_id)
         return self.code_dir / fname
 
-    def get_python_package_key(self, trial_id):
+    def _get_python_package_key(self, trial_id):
         fname = 'requirements_{}_{}.txt'.format(self.experiment_id, trial_id)
         return self.environment_dir / fname
 
-    def get_environment_key(self, env_key, trial_id, env_ext):
+    def _get_environment_key(self, env_key, trial_id, env_ext):
         assert env_ext in ('txt', 'json')
         fname = '{}_{}_{}.{}'.format(env_key, self.experiment_id,
                                      trial_id, env_ext)

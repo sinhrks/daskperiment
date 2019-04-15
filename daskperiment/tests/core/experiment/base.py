@@ -670,9 +670,7 @@ class ExperimentBase(object):
                            index=exp_idx, columns=exp_columns)
         tm.assert_frame_equal(res, exp)
 
-    def test_metric_invalid_trial_id(self):
-        ex = daskperiment.Experiment(id="test_metric_invalid",
-                                     backend=self.backend)
+    def test_metric_invalid_trial_id(self, ex):
         a = ex.parameter('a')
         assert ex.trial_id == 0
 
