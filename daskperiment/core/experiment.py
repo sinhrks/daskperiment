@@ -13,7 +13,7 @@ from daskperiment.core.errors import TrialIDNotFoundError
 from daskperiment.core.parameter import ParameterManager
 from daskperiment.core.parser import parse_command_arguments
 from daskperiment.util.log import get_logger
-from daskperiment.util.text import validate_key
+from daskperiment.util.text import validate_identifier
 
 
 logger = get_logger(__name__)
@@ -163,7 +163,7 @@ class Experiment(object):
 
         obj = super().__new__(cls)
 
-        id = validate_key(id, keyname='Experiment ID')
+        id = validate_identifier(id, keyname='Experiment ID')
         obj.id = id
         cls._instance_cache[id] = obj
         return obj
@@ -524,6 +524,7 @@ class Experiment(object):
            A value of the distinguish metric
         """
         trial_id = self._trials.current_trial_id
+        # metric_key validation is performed in MetricManager.save
         self._metrics.save(metric_key=metric_key, trial_id=trial_id,
                            epoch=epoch, value=value)
 
@@ -542,6 +543,7 @@ class Experiment(object):
         -------
         DataFrame: metrics
         """
+        # metric_key validation is performed in MetricManager.load
         if not pd.api.types.is_list_like(trial_id):
             trial_id = [trial_id]
 

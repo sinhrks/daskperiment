@@ -1,6 +1,6 @@
 import pandas as pd
 
-from daskperiment.util.text import validate_key
+from daskperiment.util.text import validate_identifier
 
 
 class _MetricManager(object):
@@ -12,7 +12,7 @@ class _MetricManager(object):
         """
         Save metrics to MetricManager
         """
-        metric_key = validate_key(metric_key, keyname='Metric name')
+        metric_key = validate_identifier(metric_key, keyname='Metric name')
         record = dict(Epoch=epoch, Value=value,
                       Timestamp=pd.Timestamp.now())
         return self._save(metric_key=metric_key,
@@ -22,7 +22,7 @@ class _MetricManager(object):
         """
         Loading metrics from (multiple) trial id
         """
-        metric_key = validate_key(metric_key, keyname='Metric name')
+        metric_key = validate_identifier(metric_key, keyname='Metric name')
 
         if not pd.api.types.is_list_like(trial_id):
             trial_id = [trial_id]
