@@ -6,8 +6,9 @@ Backend
 * `LocalBackend`: Information is stored in local files. This is for personal
   usage with single PC. This backend doesn't intend to share information with
   others and move file(s) to another PC.
-* `RedisBackend`: Information is stored in Redis. If you setup redis-server,
-  information can be shared in a small team and between some PCs.
+* `RedisBackend`: Information is stored in Redis and can be shared in a small
+  team and between some PCs.
+* `MongoBackend`: Information is stored in MongoDB and can be shared in a team.
 
 You can specify required `Backend` via `backend` keyword in `Experiment` instanciation.
 
@@ -67,7 +68,8 @@ Python package information                    Text       environmemt/requirement
 RedisBackend
 ------------
 
-`RedisBackend` saves information using `Redis`. To use `RedisBackend`, simple way is specifying Redis URI as `backend` argument.
+`RedisBackend` saves information using Redis.
+To use `RedisBackend`, simple way is specifying Redis URI as `backend` argument.
 
 .. code-block:: python
 
@@ -107,4 +109,57 @@ pandas information (`pandas.show_versions`)   Text       <experiment id>:pandas:
 conda information (`conda info`)              Text       <experiment id>:conda:<trial id>
 Git information                               Text(JSON) <experiment id>:git:<trial id>
 Python package information                    Text       <experiment id>:requirements:<trial id>
+============================================= ========== ===================
+
+
+MongoBackend
+------------
+
+`MongoBackend` saves information using MongoDB.
+To use `MongoBackend`, simple way is specifying MongoDB URI as `backend` argument.
+
+.. code-block:: python
+
+   >>> daskperiment.Experiment('mongo_uri_backend', backend='mongodb://localhost:27017/test_db')
+   ... [INFO] Initialized new experiment: Experiment(id: redis_uri_backend, trial_id: 0, backend: MongoBackend('mongodb://localhost:27017/test_db'))
+   ...
+   Experiment(id: mongo_uri_backend, trial_id: 0, backend: MongoBackend('mongodb://localhost:27017/test_db'))
+
+Or, you can use `pymogo.database.Database`.
+Note that you cannot pass `MongoClient` as backend because it doesn't specify the backend database.
+
+   >>> import pymongo
+   >>> client = pymongo.MongoClient('mongodb://localhost:27017/')
+   >>> db = client.test_db
+   >>> db
+   Database(MongoClient(host=['localhost:27017'], document_class=dict, tz_aware=False, connect=True), 'test_db')
+   >>> daskperiment.Experiment('mongo_db_backend', backend=db)
+   ... [INFO] Initialized new experiment: Experiment(id: mongo_db_backend, trial_id: 0, backend: MongoBackend('mongodb://localhost:27017/test_db'))
+   ...
+   Experiment(id: mongo_db_backend, trial_id: 0, backend: MongoBackend('mongodb://localhost:27017/test_db'))
+
+
+The `MongoBackend` creates a document collection named experiment id under
+the database specified in `MongoBackend`.
+The following table shows document created under the collection.
+
+============================================= ========== ===================
+Information                                   Format     Document
+============================================= ========== ===================
+Experiment status (internal state)            Text       `{'experiment_id': <experiment id>, 'category': 'trial_id'}`
+Experiment history (parameters)               Pickle     `{'experiment_id': <experiment id>, 'category': 'trial', 'trial_id': <trial id>, 'parameter'=<parameters>, 'history'=<history>}`
+Experiment history (results)                  Pickle     (same document as parameters)
+Persisted results                             Pickle     `{'experiment_id': <experiment id>, 'category': 'persist', 'step': <function name>, 'trial_id': <trial id>}`
+Metrics                                       Pickle     `{'experiment_id': <experiment id>, 'category': 'metric', 'metric_key': <metric name>, 'trial_id': <trial id>}`
+Function input & output hash                  Text       `{'experiment_id': <experiment id>, 'category': 'step_hash', 'input_hash': <function name>-<input hash>}`
+Code contexts                                 Text       `{'experiment_id': <experiment id>, 'category': 'code', 'trial_id': <trial id>}`
+Platform information                          Text(JSON) `{'experiment_id': <experiment id>, 'category': 'environment', 'trial_id': <trial id>, 'device': <device>, ...}`
+CPU information                               Text(JSON) (same document as device)
+Python information                            Text(JSON) (same document as device)
+NumPy information (`numpy.show_config`)       Text       (same document as device)
+SciPy information (`scipy.show_config`)       Text       (same document as device)
+pandas information (`pandas.show_versions`)   Text       (same document as device)
+conda information (`conda info`)              Text       (same document as device)
+Git information                               Text(JSON) (same document as device)
+Python package information                    Text       (same document as device)
 ============================================= ========== ===================

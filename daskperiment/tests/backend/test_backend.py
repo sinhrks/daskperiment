@@ -3,11 +3,11 @@ import pytest
 import pickle
 
 import pandas as pd
-import redis
 
 import daskperiment
 from daskperiment.backend import (init_backend, LocalBackend,
                                   MongoBackend, RedisBackend)
+from daskperiment.backend.base import maybe_mongo, maybe_redis
 
 
 class TestInitBackend(object):
@@ -36,15 +36,17 @@ class TestInitBackend(object):
         assert b.uri == backend
 
     def test_redis_init_pool(self):
+        import redis
         uri = 'redis://localhost:6379/0'
-        backend = redis.ConnectionPool.from_url(uri)
-        b = init_backend('local_backend', backend=backend)
+        pool = redis.ConnectionPool.from_url(uri)
+        b = init_backend('local_backend', backend=pool)
         assert isinstance(b, RedisBackend)
 
         assert b.uri == uri
+        assert b.pool is pool
 
     def test_maybe_redis(self):
-        from daskperiment.backend.base import maybe_redis
+        import redis
         assert maybe_redis('redis://xxx')
         assert not maybe_redis('xxx://xxx')
         assert not maybe_redis('http://xxx')
@@ -54,6 +56,54 @@ class TestInitBackend(object):
         uri = 'redis://localhost:6379/0'
         pool = redis.ConnectionPool.from_url(uri)
         assert maybe_redis(pool)
+
+    def test_mongo_init_db(self):
+        import pymongo
+        uri = 'mongodb://localhost:27017'
+        client = pymongo.MongoClient(uri)
+        b = init_backend('local_backend', backend=client.test_db)
+        assert isinstance(b, MongoBackend)
+
+        assert b.uri == 'mongodb://localhost:27017/test_db'
+        assert b.client is client
+
+        uri = 'mongodb://127.0.0.1:27017'
+        client = pymongo.MongoClient(uri)
+        b = init_backend('local_backend', backend=client.new_db)
+        assert isinstance(b, MongoBackend)
+
+        assert b.uri == 'mongodb://127.0.0.1:27017/new_db'
+        assert b.client is client
+
+    def test_mongo_no_db_raise(self):
+        uri = 'mongodb://localhost:27017'
+        with pytest.raises(ValueError):
+            init_backend('local_backend', backend=uri)
+
+    def test_maybe_mongo(self):
+        import pymongo
+
+        assert maybe_mongo('mongodb://xxx')
+        assert not maybe_mongo('xxx://xxx')
+        assert not maybe_mongo('http://xxx')
+        assert not maybe_mongo(3)
+        assert not maybe_mongo('local')
+
+        uri = 'mongodb://localhost:27017/'
+        client = pymongo.MongoClient(uri)
+        assert maybe_mongo(client.test_db)
+
+    def test_maybe_mongo_raise(self):
+        import pymongo
+        uri = 'mongodb://localhost:27017/'
+        client = pymongo.MongoClient(uri)
+        with pytest.raises(ValueError):
+            # mongo client
+            assert maybe_mongo(client)
+
+        with pytest.raises(ValueError):
+            # document collection
+            assert maybe_mongo(client.test_db.test_collection)
 
 
 class TestBackend(object):

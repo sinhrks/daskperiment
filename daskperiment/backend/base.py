@@ -89,8 +89,18 @@ def maybe_mongo(uri):
     -------
     bool: maybe_mongo
     """
-    # TODO: handle mongo db instance
-    if not isinstance(uri, str):
+    try:
+        import pymongo
+    except ImportError:
+        return False
+    if isinstance(uri, (pymongo.mongo_client.MongoClient,
+                        pymongo.collection.Collection)):
+        msg = ('To initialize MongoBackend, pymongo Database '
+               'instance must be provided, given: {}{}')
+        raise ValueError(msg.format(uri, type(uri)))
+    elif isinstance(uri, pymongo.database.Database):
+        return True
+    elif not isinstance(uri, str):
         return False
     return uri.startswith('mongodb://')
 
