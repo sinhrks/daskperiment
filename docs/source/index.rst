@@ -15,7 +15,7 @@ It can be used both on Jupyter and command line (and also on standard Python int
 
   - No need to set up server applications
   - No need to registrate on any cloud services
-  - Run on your customized Python shells
+  - Run on standard / customized Python shells
 
 -Intuitive user interface
 
