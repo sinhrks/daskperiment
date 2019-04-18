@@ -38,14 +38,11 @@ class ExperimentBase(object):
                                       backend=self.backend)
         assert ex1 is ex2
 
-    def test_invalid_id(self):
-        msg = 'Experiment ID must be str, given:'
+    @pytest.mark.parametrize("key", [1, "aa:aa", "aa.aa"])
+    def test_invalid_id(self, key):
+        msg = 'Experiment ID must be '
         with pytest.raises(ValueError, match=msg):
-            daskperiment.Experiment(id=1, backend=self.backend)
-
-        msg = 'Experiment ID cannot contain colon '
-        with pytest.raises(ValueError, match=msg):
-            daskperiment.Experiment(id="aa:aa", backend=self.backend)
+            daskperiment.Experiment(id=key, backend=self.backend)
 
     def test_repr(self, ex):
         fmt = 'Experiment(id: test_repr, trial_id: {}, backend: {})'
@@ -670,9 +667,7 @@ class ExperimentBase(object):
                            index=exp_idx, columns=exp_columns)
         tm.assert_frame_equal(res, exp)
 
-    def test_metric_invalid_trial_id(self):
-        ex = daskperiment.Experiment(id="test_metric_invalid",
-                                     backend=self.backend)
+    def test_metric_invalid_trial_id(self, ex):
         a = ex.parameter('a')
         assert ex.trial_id == 0
 
@@ -716,6 +711,22 @@ class ExperimentBase(object):
 
         with pytest.raises(TrialIDNotFoundError, match=match):
             ex.load_metric('dummy_metric', trial_id=2)
+
+    @pytest.mark.parametrize("key", [1, "aa:aa", "aa.aa"])
+    def test_metric_invalid_key(self, key, ex):
+        a = ex.parameter('a')
+        assert ex.trial_id == 0
+
+        @ex.result
+        def inc(a):
+            ex.save_metric(key, epoch=1, value=2)
+            return a + 1
+
+        res = inc(a)
+        ex.set_parameters(a=3)
+        msg = 'Metric name must be '
+        with pytest.raises(ValueError, match=msg):
+            res.compute()
 
     def test_code(self, ex):
         a = ex.parameter("a")

@@ -1,8 +1,21 @@
+import pytest
+
 import os
-from daskperiment.util.text import trim_indent
+
+from daskperiment.util.text import validate_identifier, trim_indent
 
 
 class TestText(object):
+
+    @pytest.mark.parametrize("key", ['xxx1', "aaa_aaa"])
+    def test_validate_identifier(self, key):
+        validate_identifier(key)
+
+    @pytest.mark.parametrize("key", ['1xxx', 1, 'aaa.aaa', 'aaa:aaa',
+                                     'aaa-aaa'])
+    def test_validate_identifier_raises(self, key):
+        with pytest.raises(ValueError):
+            validate_identifier(key)
 
     def test_trim_indent(self):
         res = trim_indent("")

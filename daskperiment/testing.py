@@ -21,12 +21,12 @@ def ex(request):
     ex._delete_cache()
 
 
-class RedisCleanupMixin(object):
+class CleanupMixin(object):
 
     def setup_class(cls):
-        from daskperiment.backend import RedisBackend
-        RedisBackend('remove_all', cls.backend)._delete_cache()
+        from daskperiment.backend import init_backend
+        init_backend('remove_all', backend=cls.backend)._delete_cache()
 
     def teardown_class(cls):
-        from daskperiment.backend import RedisBackend
-        RedisBackend('remove_all', cls.backend)._delete_cache()
+        from daskperiment.backend import init_backend
+        init_backend('remove_all', backend=cls.backend)._delete_cache()
