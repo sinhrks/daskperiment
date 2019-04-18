@@ -2,35 +2,35 @@ Welcome to daskperiment's documentation!
 ========================================
 
 `daskperiment` is a tool to perform reproducible machine learning experiment.
-It allows users to define and manage the history of trials
+It enables users to define and manage the history of trials
 (given parameters, results and execution environment).
 
-The package is built on `Dask`, a package for parallel computing with task
+This package is built on `Dask`, a package for parallel computing with task
 scheduling. Each experiment trial is internally expressed as `Dask` computation
 graph, and can be executed in parallel.
 
-It can be used in both Jupyter and command line (and also in standard Python interpreter). The benefits of daskperiemnt are:
+It can be used both on Jupyter and command line (and also on standard Python interpreter). The benefits of daskperiemnt are:
 
-- Usable in standard Python/Jupyter environment (and optionally with standard KVS).
+- Compatibility with standard Python/Jupyter environment (and optionally with standard KVS).
 
-  - No need to setting up server applications.
-  - No registration to cloud services.
-  - Not to be constrained by slightly customized Python shells.
+  - No need to set up server applications
+  - No need to registrate on any cloud services
+  - Run on standard / customized Python shells
 
-- User-intuitive.
+-Intuitive user interface
 
-  - Minimizing modifications of existing codes.
-  - Logging automatically (no need to write additional codes for logging)
-  - Performing experiments using `Dask` compatible API.
-  - Easily handle experiments history (with `pandas` basic operations).
-  - Requires less work to manage with Git (no need to make branch per trials).
-  - (Experimental) Web dashboard to manage trial history.
+  - Few modifications on existing codes are needed
+  - Trial histories are logged automatically (no need to write additional codes for logging)
+  - `Dask` compatible API
+  - Easily accessible experiments history (with `pandas` basic operations)
+  - Less managiment works on Git (no need to make branch per trials)
+  - (Experimental) Web dashboard to manage trial history
 
-- Tracking experiment related information.
+-Traceability of experiment related information
 
   - Trial result and its (hyper) parameters.
-  - Code context.
-  - Environment information.
+  - Code contexts
+  - Environment information
 
     - Device information
     - OS information
@@ -38,14 +38,14 @@ It can be used in both Jupyter and command line (and also in standard Python int
     - Installed Python packages and its version
     - Git information
 
-- Reproducibility.
+- Reproducibility
 
   - Check function purity (each step should return the same output for the same inputs)
   - Automatic random seeding
 
-- Auto saving and loading previous experiment history.
-- Parallel execution of experiment steps.
-- Sharing experiments.
+- Auto saving and loading of previous experiment history
+- Parallel execution of experiment steps
+- Experiment sharing
 
   - Redis backend
 

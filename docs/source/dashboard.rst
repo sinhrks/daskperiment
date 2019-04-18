@@ -7,8 +7,8 @@ Launch From Script
 ------------------
 
 To launch the dashboard from script, use `Experiment.start_dashboard`.
-It should be non-blocking if it is called from interactive
-shell like Jupyter, and be blocking if it is executed as a file.
+It should be non-blocking when called from interactive
+shell like Jupyter, and be blocking when executed as a file.
 
 
 .. code-block:: python

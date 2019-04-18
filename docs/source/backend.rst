@@ -3,23 +3,21 @@ Backend
 
 `daskperiment` uses `Backend` classes to define how and where experiment results are saved. Currently, following backends are supported.
 
-* `LocalBackend`: Information is stored in local files. This is for personal
-  usage with single PC. This backend doesn't intend to share information with
-  others and move file(s) to another PC.
-* `RedisBackend`: Information is stored in Redis and can be shared in a small
-  team and between some PCs.
-* `MongoBackend`: Information is stored in MongoDB and can be shared in a team.
+* `LocalBackend`: Information is stored in local files. This is for personal usage with single PC. Use this backend when you don't need to share information
+  with others or to move file(s) to another PC.
+* `RedisBackend`: Information is stored in Redis and can be shared in a small team or among several PCs.
+* `MongoBackend`: Information is stored in MongoDB and can be shared in a team or among PCs.
 
 You can specify required `Backend` via `backend` keyword in `Experiment` instanciation.
 
 LocalBackend
 ------------
 
-`LocalBackend` saves information as local files. When you create `Experiment` instance without `backend` argument, the `Experiment` uses `LocalBackend` to save its information.
+`LocalBackend` saves information as local files. When you create `Experiment` instance without `backend` argument, the `Experiment` uses `LocalBackend` to save its information as default.
 
 .. note::
 
-   Following examples omit unrelated logs.
+   Unrelated logs are omited in following examples.
 
 .. code-block:: python
 
@@ -30,7 +28,7 @@ LocalBackend
    ...
    Experiment(id: local_default_backend, trial_id: 0, backend: LocalBackend('daskperiment_cache/local_default_backend'))
 
-To change the directory location, passing `pathlib.Path` instance as `backend` makes `LocalBackend` with custom location.
+To change the directory location, specify the path as `pathlib.Path` instance to `backend` argument.
 
 .. code-block:: python
 
@@ -42,7 +40,7 @@ To change the directory location, passing `pathlib.Path` instance as `backend` m
    Experiment(id: local_custom_backend, trial_id: 0, backend: LocalBackend('my_dir'))
 
 
-The following table shows information and its saved location under cache directory specified in `LocalBackend`.
+The following table shows information and saved location under specified cache directory.
 
 ============================================= ========== ===================
 Information                                   Format     Path
@@ -68,8 +66,8 @@ Python package information                    Text       environmemt/requirement
 RedisBackend
 ------------
 
-`RedisBackend` saves information using Redis.
-To use `RedisBackend`, simple way is specifying Redis URI as `backend` argument.
+`RedisBackend` saves information using `Redis`.
+To use `RedisBackend`, one of the simple ways is specifying Redis URI as `backend` argument.
 
 .. code-block:: python
 
@@ -88,7 +86,7 @@ Or, you can use `redis.ConnectionPool`.
    Experiment(id: redis_pool_backend, trial_id: 0, backend: RedisBackend('redis://localhost:6379/0'))
 
 
-The following table shows information and its saved location under Redis database specified in `RedisBackend`.
+The following table shows information and saved location under specified Redis database.
 
 ============================================= ========== ===================
 Information                                   Format     Key
@@ -116,7 +114,7 @@ MongoBackend
 ------------
 
 `MongoBackend` saves information using MongoDB.
-To use `MongoBackend`, simple way is specifying MongoDB URI as `backend` argument.
+To use `MongoBackend`, one of the simple ways is specifying MongoDB URI as `backend` argument.
 
 .. code-block:: python
 

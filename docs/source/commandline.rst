@@ -4,9 +4,9 @@ Command Line Interface
 
 `daskperiment` also supports execution from command line.
 
-First, prepare a `Python` script to define experiment. The usage of `Experiment` class is all the same as Jupyter example. `daskperiment` regards a result of a function decorated with `Experiment.result` (`calculate_score` function in below case) as experiment output.
+First, prepare a `Python` script to define experiment. The usage of `Experiment` class is all the same as Jupyter example. `daskperiment` regards the result of a function decorated with `Experiment.result` (`calculate_score` function in below case) as experiment output.
 
-The below is a prepared script named "simple_experiment.py".
+The below is a prepared script example named "simple_experiment.py".
 
 .. code-block:: python
 
@@ -50,7 +50,7 @@ Let's perform another trial using different parameters. daskperiment automatical
    ... [INFO] Finished Experiment (trial id=2)
    ...
 
-To confirm the experiment results, instanciate `Experiment` specifying the same id as the script and use `Experiment.get_history`.
+To confirm the experiment results, instanciate `Experiment` specifying the id of the script and use `Experiment.get_history`.
 
 .. code-block:: python
 
