@@ -17,7 +17,7 @@ It can be used both on Jupyter and command line (and also on standard Python int
   - No need to registrate on any cloud services
   - Run on standard / customized Python shells
 
--Intuitive user interface
+- Intuitive user interface
 
   - Few modifications on existing codes are needed
   - Trial histories are logged automatically (no need to write additional codes for logging)
@@ -26,7 +26,7 @@ It can be used both on Jupyter and command line (and also on standard Python int
   - Less managiment works on Git (no need to make branch per trials)
   - (Experimental) Web dashboard to manage trial history
 
--Traceability of experiment related information
+- Traceability of experiment related information
 
   - Trial result and its (hyper) parameters.
   - Code contexts
@@ -48,6 +48,7 @@ It can be used both on Jupyter and command line (and also on standard Python int
 - Experiment sharing
 
   - Redis backend
+  - MongoDB backend
 
 Contents:
 
