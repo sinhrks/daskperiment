@@ -1,54 +1,137 @@
-import pathlib
+import pytest
 
-from bokeh.models.layouts import Column
+import json
 
 import daskperiment
-from daskperiment.board.board import DaskperimentBoard, get_resources
+import daskperiment.board.board as board
+
+
+@pytest.fixture
+def client():
+    board.app.config['TESTING'] = True
+    client = board.app.test_client()
+
+    yield client
 
 
 class TestBoard(object):
 
-    def test_build_layout(self):
-        ex = daskperiment.Experiment('board')
-
-        # empty experiment
-        b = DaskperimentBoard(ex)
-        app = b.build_layout()
-        assert isinstance(app, Column), type(app)
-
+    @classmethod
+    def setup_class(cls):
+        # TODO: setup_class
+        ex = daskperiment.Experiment('test_board')
         a = ex.parameter('a')
 
         @ex.result
         def inc(a):
+            for i in range(3):
+                ex.save_metric('my_metric', epoch=i, value=a + i)
             return a + 1
 
         res = inc(a)
-        ex.set_parameters(a=1)
-        assert res.compute() == 2
 
-        b = DaskperimentBoard(ex)
-        app = b.build_layout()
-        assert isinstance(app, Column), type(app)
+        for i in range(3):
+            ex.set_parameters(a=i)
+            res.compute()
 
-        @ex.result
-        def inc(a):
-            ex.save_metric('dummy', epoch=1, value=1)
-            ex.save_metric('dummy2', epoch=1, value=1)
-            return a + 1
+        ex.start_dashboard(blocking=False)
+        cls.ex = ex
 
-        res = inc(a)
-        ex.set_parameters(a=2)
-        assert res.compute() == 3
+    @classmethod
+    def teardown_class(cls):
+        cls.ex._delete_cache()
 
-        b = DaskperimentBoard(ex)
-        app = b.build_layout()
-        assert isinstance(app, Column), type(app)
+    def test_html(self, client):
+        response = client.get('/')
+        assert response.status == '200 OK'
+        assert response.data.startswith(b'<!doctype html>')
 
-        ex._delete_cache()
+    def test_css(self, client):
+        response = client.get('/static/css/style.css')
+        assert response.status == '200 OK'
+        assert response.data.startswith(b'html {')
 
-    def test_resources(self):
-        t = get_resources('templates')
-        assert pathlib.Path(t).is_dir()
+    def test_get_summary_result(self, client):
+        response = client.get('/json/summary/result')
+        assert response.status == '200 OK'
 
-        s = get_resources('statics')
-        assert pathlib.Path(s).is_dir()
+        result = json.loads(response.data)
+        exp = {'datasets': [{'borderWidth': 1, 'data': [1, 2, 3],
+                             'label': 'Result'}],
+               'labels': [1, 2, 3]}
+        assert result == exp
+
+    def test_get_summary_processtime(self, client):
+        response = client.get('/json/summary/processtime')
+        assert response.status == '200 OK'
+
+        result = json.loads(response.data)
+        assert result['labels'] == [1, 2, 3]
+        assert all(d < 100 for d in result['datasets'][0]['data'])
+
+    def test_get_table(self, client):
+        response = client.get('/json/table')
+        assert response.status == '200 OK'
+
+        result = json.loads(response.data)
+        assert isinstance(result, dict)
+        exp_columns = [{'data': None, 'defaultContent': ''},
+                       {'data': 0, 'title': 'Trial ID'},
+                       {'data': 1, 'title': 'a'},
+                       {'data': 2, 'title': 'Seed'},
+                       {'data': 3, 'title': 'Result'},
+                       {'data': 4, 'title': 'Result Type'},
+                       {'data': 5, 'title': 'Success'},
+                       {'data': 6, 'title': 'Finished'},
+                       {'data': 7, 'title': 'Process Time'},
+                       {'data': 8, 'title': 'Description'}]
+        assert result['columns'] == exp_columns
+        # trial id
+        assert [d[0] for d in result['data']] == [1, 2, 3]
+        # a
+        assert [d[1] for d in result['data']] == [0, 1, 2]
+        # result
+        assert [d[3] for d in result['data']] == [1, 2, 3]
+
+    @pytest.mark.parametrize('id,exp', [(1, [0, 1, 2]), (2, [1, 2, 3]),
+                                        (3, [2, 3, 4])])
+    def test_get_metric(self, id, exp, client):
+        url = '/json/metric/?ids=[{}]&keys=["my_metric"]'
+        response = client.get(url.format(id))
+        assert response.status == '200 OK'
+
+        result = json.loads(response.data)
+        expected = {'datasets': [{'data': exp,
+                                  'label': 'my_metric:{}'.format(id)}],
+                    'labels': [0, 1, 2]}
+        assert result == expected
+
+    def test_get_metric_multi(self, client):
+        url = '/json/metric/?ids=[1,2,3]&keys=["my_metric"]'
+        response = client.get(url.format(id))
+        assert response.status == '200 OK'
+
+        result = json.loads(response.data)
+        expected = {'datasets': [{'data': [0, 1, 2], 'label': 'my_metric:1'},
+                                 {'data': [1, 2, 3], 'label': 'my_metric:2'},
+                                 {'data': [2, 3, 4], 'label': 'my_metric:3'}],
+                    'labels': [0, 1, 2]}
+        assert result == expected
+
+    def test_get_code(self, client):
+        response = client.get('/data/code/1')
+        assert response.status == '200 OK'
+        assert response.data.startswith(b'@ex.result')
+
+        response2 = client.get('/data/code/3')
+        assert response2.status == '200 OK'
+        assert response2.data == response.data
+
+    def test_get_env(self, client):
+        response = client.get('/data/env/1')
+        assert response.status == '200 OK'
+        assert response.data.startswith(b'Platform Information:')
+
+        response2 = client.get('/data/env/3')
+        assert response2.status == '200 OK'
+        assert response2.data == response.data
