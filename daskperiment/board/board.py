@@ -1,135 +1,138 @@
-import pathlib
+import html
+import json
+
+from flask import Flask,  jsonify, render_template, request
 
 import numpy as np
-import bokeh.layouts as layouts
-from bokeh.models.widgets import Div, Tabs
+import pandas as pd
 
 import daskperiment
-from daskperiment.board.component import (SummaryPanel,
-                                          MetricPanel,
-                                          CodePanel,
-                                          EnvironmentPanel)
-from daskperiment.board.utils import convert_columns
 
 
-# TODO: get screeninfo
-WIDTH = 1200
-HEIGHT = 650
+app = Flask(__name__)
 
 
-def get_resources(name):
-    return str(pathlib.Path(__file__).parent / name)
+@app.route('/')
+def summary():
+    title = 'Experiment: {}'.format(ex.id)
+    metric_names = ex._metrics.keys()
+    if len(metric_names) == 0:
+        metric_names = ['']
+
+    return render_template('index.html',
+                           title=title,
+                           metric_names=metric_names)
 
 
-class DaskperimentBoard(object):
-
-    _STARTED = False
-
-    def __init__(self, experiment, palette='Viridis',
-                 width=WIDTH, height=HEIGHT):
-        self.experiment = experiment
-        self.palette = palette
-
-        self.width = width
-        self.height = height
-
-    def build_layout(self):
-        from bokeh.models import ColumnDataSource
-        from bokeh.models.widgets import DataTable
-
-        history = self.experiment.get_history(verbose=True)
-        history = history.reset_index()
-        self.history = history
-
-        source = ColumnDataSource(history)
-
-        columns = convert_columns(history)
-        dt = DataTable(source=source, columns=columns,
-                       width=WIDTH, height=int(HEIGHT * 0.6))
-
-        source.selected.on_change('indices', self.callback_datatable_select)
-        self.source = source
-
-        # trial IDs selected on DataTable
-        self.trial_ids = []
-
-        tabs = self.build_tabs()
-        title = Div(text='<h1>Trial Results</h1>')
-        layout = layouts.layout([[title], [dt], [tabs]],
-                                sizing_mode='scale_width')
-
-        self.layout = layout
-        return self.layout
-
-    def make_document(self, doc):
-        from jinja2 import Environment, FileSystemLoader
-
-        TEMPLATE = get_resources('templates')
-        env = Environment(loader=FileSystemLoader(TEMPLATE))
-
-        layout = self.build_layout()
-        doc.template = env.get_template('index.html')
-        doc.add_root(layout)
-        doc.title = 'daskperiment: {}'.format(self.experiment.id)
-        return doc
-
-    def build_tabs(self):
-        self.summary_tab = SummaryPanel(self)
-        self.metric_tab = MetricPanel(self)
-        self.code_tab = CodePanel(self)
-        self.environment_tab = EnvironmentPanel(self)
-        # TODO: Log output
-
-        return Tabs(tabs=[self.summary_tab.build(),
-                          self.metric_tab.build(),
-                          self.code_tab.build(),
-                          self.environment_tab.build()],
-                    sizing_mode='scale_width')
-
-    def callback_datatable_select(self, attr, old, selected):
-        """
-        Callback to update metric plot based on DataTable selection
-        """
-        # mapping selected indices to trial ids
-        self.trial_ids = [int(self.history['Trial ID'].iloc[i])
-                          for i in selected]
-        self.metric_tab.update_content()
-        self.code_tab.update_content()
-        self.environment_tab.update_content()
+def maybe_escape(s):
+    try:
+        return html.escape(s)
+    except Exception:
+        s
 
 
-def maybe_start_dashboard(experiment, port=5000):
-    if DaskperimentBoard._STARTED:
-        # do not run duplicatedly
-        # shoud find better way...
-        return
+@app.route('/json/summary/<label>')
+def get_summary(label):
+    mapper = {'result': 'Result', 'processtime': 'Process Time'}
+    label = mapper[label]
+    df = ex.get_history(verbose=True)
 
-    from bokeh.application import Application
-    from bokeh.application.handlers.function import FunctionHandler
-    from bokeh.server.server import Server
-    from tornado.web import StaticFileHandler
+    data = df[label]
+    json_index = data.index.to_series().to_json(orient='values')
+    json_data = data.to_json(orient='values')
 
-    h = DaskperimentBoard(experiment)
+    data = {'labels': json.loads(json_index),
+            'datasets': [{'label': label,
+                          'data': json.loads(json_data),
+                          'borderWidth': 1}]}
+    return jsonify(data)
 
-    apps = {'/': Application(FunctionHandler(h.make_document))}
 
-    STATIC = get_resources('statics')
-    patterns = [(r"/statics/(.*)", StaticFileHandler, {"path": STATIC})]
+@app.route('/json/table')
+def get_table():
+    df = ex.get_history(verbose=True)
+    df = df.reset_index(drop=False)
+    # perform formatting on server side
+    df['Finished'] = df['Finished'].dt.strftime("%Y-%m-%d %H:%M:%S")
 
-    server = Server(apps, port=port, extra_patterns=patterns)
+    # TODO: list up string dtype and escape
+    df['Result Type'] = df['Result Type'].map(maybe_escape)
+    df['Description'] = df['Description'].map(maybe_escape)
 
-    if experiment._environment.maybe_jupyter():
-        # in jupyter, .run_until_shutdown() may raise RuntimeError
-        # because of IOLoop
-        server.start()
+    json_data = json.loads(df.to_json(orient="split"))
+
+    columns = [{"title": str(col), 'data': i} for (i, col) in
+               enumerate(json_data["columns"])]
+
+    # dummy for checkbox, is there better way?
+    columns = [{"data": None, 'defaultContent': ''}] + columns
+    return jsonify(data=json_data["data"], columns=columns)
+
+
+@app.route('/json/metric/')
+def get_metric():
+
+    ids = json.loads(request.args.get('ids'))
+    keys = json.loads(request.args.get('keys'))
+
+    # TODO: move to Experiment.load_metric
+    metrics = []
+    for key in keys:
+        try:
+            metric = ex.load_metric(key, trial_id=ids)
+            metric.columns = [key + ':{}'.format(c) for c in metric.columns]
+            metrics.append(metric)
+        except Exception:
+            pass
+    if len(metrics) == 0:
+        data = {'labels': [], 'datasets': []}
+        return jsonify(data)
+
+    metrics = pd.concat(metrics, axis=1)
+    json_index = metrics.index.to_series().to_json(orient='values')
+    datasets = []
+    for name, col in metrics.iteritems():
+        json_data = col.to_json(orient='values')
+        datasets.append({'label': name,
+                         'data': json.loads(json_data)})
+
+    data = {'labels': json.loads(json_index),
+            'datasets': datasets}
+    return jsonify(data)
+
+
+@app.route('/data/code/<int:id>')
+def get_code(id):
+    code = ex.get_code(trial_id=id)
+    return code
+
+
+@app.route('/data/env/<int:id>')
+def get_env(id):
+    env = ex.get_environment(trial_id=id)
+    return env
+
+
+def maybe_start_dashboard(experiment, port=5000, blocking=None,
+                          debug=False):
+    global ex
+    ex = experiment
+
+    if blocking is None:
+        if experiment._environment.maybe_jupyter():
+            blocking = False
+        else:
+            blocking = True
+    if blocking:
+        app.run(host='0.0.0.0', port=port, debug=debug)
     else:
-        server.run_until_shutdown()
+        import threading
+        threading.Thread(target=app.run,
+                         kwargs=dict(host='0.0.0.0', port=port,
+                                     debug=debug))
 
-    DaskperimentBoard._STARTED = True
-    return server
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     ex = daskperiment.Experiment('bokeh_test')
     a = ex.parameter('a')
 
@@ -144,4 +147,4 @@ if __name__ == '__main__':
     ex.set_parameters(a=2)
     inc(a)
 
-    ex.start_dashboard()
+    maybe_start_dashboard(ex, debug=True)

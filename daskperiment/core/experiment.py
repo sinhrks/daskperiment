@@ -612,9 +612,9 @@ class Experiment(object):
     # Dashboard
     ##########################################################
 
-    def start_dashboard(self, port=5000):
+    def start_dashboard(self, port=5000, blocking=None):
         """
         Start DaskperimentBoard web application.
         """
         import daskperiment.board.board as board
-        return board.maybe_start_dashboard(self, port=port)
+        return board.maybe_start_dashboard(self, port=port, blocking=blocking)

@@ -1,15 +1,197 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
+    <!-- Required meta tags -->
     <meta charset="utf-8">
-    {{ bokeh_css }}
-    {{ bokeh_js }}
-    <link rel="stylesheet" href="statics/css/styles.css"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css">
+    <!-- DataTable CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4-4.1.1/jq-3.3.1/dt-1.10.18/b-1.5.6/datatables.min.css"/>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/select/1.3.0/css/select.dataTables.min.css"/>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    <title>{{ title }}</title>
   </head>
   <body>
-    <div class='content'>
-    {{ plot_div|indent(6) }}
-    {{ plot_script|indent(6) }}
+    <div class="content">
+      <div class="px-3">
+
+        <table id="experiment-table" class="table table-striped table-bordered"></table>
+
+        <ul class="nav nav-tabs">
+          <li class="nav-item">
+            <a href="#tab-summary" class="nav-link" data-toggle="tab">Summary</a>
+          </li>
+          <li class="nav-item">
+            <a href="#tab-metric" class="nav-link" data-toggle="tab">Metric</a>
+          </li>
+          <li class="nav-item">
+            <a href="#tab-code" class="nav-link" data-toggle="tab">Code</a>
+          </li>
+          <li class="nav-item">
+            <a href="#tab-environment" class="nav-link" data-toggle="tab">Environment</a>
+          </li>
+        </ul>
+
+        <div class="tab-content">
+          <div id="tab-summary" class="tab-pane active">
+            <div id="content-summary">
+              <div id="content-summary-header">
+                <select id="summary-selection">
+                  <option value="result" selected>Result</option>
+                  <option value="processtime">Process Time</option>
+                </select>
+              </div>
+              <div id="content-metric-body">
+                <canvas id="chart-summary" height="25"></canvas>
+              </div>
+            </div>
+          </div>
+          <div id="tab-metric" class="tab-pane">
+            <div id="content-metric">
+              <div id="content-metric-header">
+                <p>
+                  {% for metric in metric_names %}
+                  <input type="checkbox" name="metric-selection[]" value="{{ metric }}" checked>
+                  {{ metric }}
+                  {% endfor %}
+                </p>
+              </div>
+              <div id="content-metric-body">
+                <canvas id="chart-metric" height="50"></canvas>
+              </div>
+            </div>
+          </div>
+          <div id="tab-code" class="tab-pane">
+            <div id="content-code">
+              <div id="content-code-header"></div>
+              <pre id="content-code-body" class="prettyprint lang-py">
+              </pre>
+            </div>
+          </div>
+          <div id="tab-environment" class="tab-pane">
+            <div id="content-environment">
+              <div id="content-env-header"></div>
+              <pre id="content-env-body"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs4-4.1.1/jq-3.3.1/dt-1.10.18/b-1.5.6/datatables.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/select/1.3.0/js/dataTables.select.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.bundle.min.js"></script>
+    <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
+
+    <script type="text/javascript">
+      var table = null;
+      $(document).ready(function() {
+        $.getJSON('/json/table', {
+        }, function(data) {
+          table = $('#experiment-table').DataTable({
+            data: data.data,
+            columns: data.columns,
+            columnDefs: [{
+                orderable: false,
+                className: 'select-checkbox',
+                targets:   0
+              }],
+              select: {
+                style: 'multi',
+                selector: 'td:first-child'
+              },
+              order: [[ 1, 'asc' ]],
+            responsive: true
+          });
+
+          // table selection update (metric, code, environment)
+          table.on('select', function (e, dt, type, indexes) {
+            updateMetric();
+
+            var trial_id = table.cell(indexes[0], 1).data();
+            updateCode(trial_id);
+            updateEnvironment(trial_id);
+          });
+
+          table.on('deselect', function (e, dt, type, indexes) {
+            updateMetric();
+          });
+
+          // summary update
+          updateSummary();
+
+          //summary update
+          $("#summary-selection").on('change', function() {
+            updateSummary();
+          });
+
+          //metric update
+          $('input[name="metric-selection[]"]').on('change', function() {
+            updateMetric();
+          })
+        });
+        return false;
+      });
+
+      function updateSummary() {
+        var target = $("#summary-selection option:selected").val();
+        var ctx = document.getElementById('chart-summary').getContext('2d');
+        $.getJSON('/json/summary/' + target, function(data) {
+          var myChart = new Chart($(ctx), {
+              type: 'bar',
+              data: data,
+              options: { scales: {yAxes: [{ticks: {beginAtZero: true}}]}}
+          });
+        });
+      }
+
+      function updateMetric() {
+        var rows = table.cells('.selected', 1).data().toArray();
+        var ids = encodeURIComponent(JSON.stringify(rows));
+        var keys = [];
+        $('input[name="metric-selection[]"]:checked').map(function() {
+          keys.push($(this).val());
+        });
+        keys = encodeURIComponent(JSON.stringify(keys));
+
+        var ctx = document.getElementById('chart-metric').getContext('2d');
+        $.get(url='json/metric/?ids=' + ids + '&keys=' + keys,
+          success=function(data) {
+            var myChart = new Chart($(ctx), {
+                type: 'line',
+                data: data,
+                options: { scales: {yAxes: [{ticks: {beginAtZero: true}}]}}
+            });
+          }
+        );
+      }
+
+      function updateCode(trial_id) {
+        $.get(url='data/code/' + trial_id.toString(),
+          success=function(data) {
+            $('#content-code-header').html('Code of trial#' + trial_id.toString())
+            $('#content-code-body').html(PR.prettyPrintOne(data, 'py'));
+          }
+        );
+      }
+
+      function updateEnvironment(trial_id) {
+        $.get(url='data/env/' + trial_id.toString(),
+          success=function(data) {
+            $('#content-env-header').html('Environment of trial#' + trial_id.toString())
+            $('#content-env-body').html(data);
+          }
+        );
+      }
+    </script>
   </body>
 </html>
