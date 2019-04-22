@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 import daskperiment
+from daskperiment.board.utils import get_colors
 
 
 app = Flask(__name__)
@@ -90,11 +91,15 @@ def get_metric():
 
     metrics = pd.concat(metrics, axis=1)
     json_index = metrics.index.to_series().to_json(orient='values')
+
     datasets = []
-    for name, col in metrics.iteritems():
+    colors = get_colors('Viridis', len(metrics.columns))
+    for ((name, col), color) in zip(metrics.iteritems(), colors):
         json_data = col.to_json(orient='values')
         datasets.append({'label': name,
-                         'data': json.loads(json_data)})
+                         'data': json.loads(json_data),
+                         'borderColor': color,
+                         'fill': False})
 
     data = {'labels': json.loads(json_index),
             'datasets': datasets}
