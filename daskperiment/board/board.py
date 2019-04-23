@@ -126,6 +126,8 @@ def maybe_start_dashboard(experiment, port=5000, blocking=None,
     if blocking is None:
         if experiment._environment.maybe_jupyter():
             blocking = False
+        elif experiment._environment.get_python_mode() == 'Test':
+            return
         else:
             blocking = True
     if blocking:
