@@ -34,7 +34,7 @@ class TestBoard(object):
             ex.set_parameters(a=i)
             res.compute()
 
-        ex.start_dashboard(blocking=False)
+        board.ex = ex
         cls.ex = ex
 
     @classmethod

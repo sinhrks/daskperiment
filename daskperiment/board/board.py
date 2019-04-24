@@ -126,15 +126,18 @@ def maybe_start_dashboard(experiment, port=5000, blocking=None,
     if blocking is None:
         if experiment._environment.maybe_jupyter():
             blocking = False
+        elif experiment._environment.get_python_mode() == 'Test':
+            return
         else:
             blocking = True
     if blocking:
         app.run(host='0.0.0.0', port=port, debug=debug)
     else:
         import threading
-        threading.Thread(target=app.run,
-                         kwargs=dict(host='0.0.0.0', port=port,
-                                     debug=debug))
+        thread = threading.Thread(target=app.run,
+                                  kwargs=dict(host='0.0.0.0', port=port,
+                                              debug=debug))
+        thread.start()
 
 
 if __name__ == "__main__":
