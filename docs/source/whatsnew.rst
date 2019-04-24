@@ -1,11 +1,14 @@
 What's new
 ==========
 
-v0.x.x
+v0.5.0
 ------
 
 Enhancement
 ^^^^^^^^^^^
+
+* MongoDB backend support
+* Redesign web dashboard
 
 Bug fix
 ^^^^^^^
