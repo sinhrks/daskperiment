@@ -46,6 +46,7 @@ Let's perform another trial using different parameters. daskperiment automatical
    python ../scripts/simple_experiment.py a=3 b=2
 
    ... [INFO] Loading Experiment from file: daskperiment_cache/simple_experiment_pj/simple_experiment_pj.pkl
+   ...
    ... [INFO] Finished Experiment (trial id=2)
    ...
 
@@ -57,7 +58,7 @@ To confirm the experiment results, instanciate `Experiment` specifying the same 
 
    >>> ex = daskperiment.Experiment(id='simple_experiment_pj')
    >>> ex.get_history()
-   a  b  Result    Result Type  Success                   Finished  \
+      a  b  Result    Result Type  Success                   Finished  \
    1  1  2       4  <class 'int'>     True 2019-02-03 XX:XX:XX.XXXXXX
    2  3  2       6  <class 'int'>     True 2019-02-03 XX:XX:XX.XXXXXX
 

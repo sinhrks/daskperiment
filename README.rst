@@ -14,12 +14,26 @@ daskperiment
 Overview
 ~~~~~~~~
 
-A lightweight tool to perform reproducible machine learning experiment using Dask.
+`daskperiment` is a tool to perform reproducible machine learning experiment.
+It allows users to define and manage the history of trials
+(given parameters, results and execution environment).
+
+The package is built on `Dask`, a package for parallel computing with task
+scheduling. Each experiment trial is internally expressed as `Dask` computation
+graph, and can be executed in parallel.
 
 **The package is EXTREMELY unstable.**
 
 Benefits
 ~~~~~~~~
+
+- Usable in standard Python /Jupyter environment (and optionally KVS).
+
+  - No need to:
+
+    - Setting up server applications.
+    - Register to cloud services.
+    - Constrained slightly customized Python shells.
 
 - User-intuitive.
 
@@ -31,9 +45,10 @@ Benefits
 - Tracking experiment result and its (hyper) parameters.
 - Tracking environment.
 
-  - OS Info
+  - Device information
+  - OS information
   - Python version
-  - Installed package and its version
+  - Installed Python packages and its version
 
 - Tracking code context.
 - Auto saving and loading previous experiment history.
