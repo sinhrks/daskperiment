@@ -62,6 +62,6 @@ To confirm the experiment results, instanciate `Experiment` specifying the same 
    1  1  2       4  <class 'int'>     True 2019-02-03 XX:XX:XX.XXXXXX
    2  3  2       6  <class 'int'>     True 2019-02-03 XX:XX:XX.XXXXXX
 
-     Process Time  Description
+        Process Time  Description
    1 00:00:00.009560          NaN
    2 00:00:00.006512          NaN

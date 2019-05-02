@@ -110,6 +110,8 @@ class RedisBackend(_BaseBackend):
         res = self.client.get(key)
 
         if res is None:
+            # TODO: define better exception
+            # key may not contain trial id
             raise TrialIDNotFoundError(key)
         else:
             return res.decode('utf-8')

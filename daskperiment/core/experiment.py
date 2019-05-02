@@ -85,14 +85,18 @@ class Result(Delayed):
             self.compute()
 
 
-def persist_result(experiment, func):
+def wrap_result(experiment, func, persist=False):
     """
     Persist (cache) an intermediate step result
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         result = func(*args, **kwargs)
-        experiment._save_persist(func.__name__, result)
+
+        experiment._trials.maybe_pure(func, (args, kwargs), result)
+
+        if persist:
+            experiment._save_persist(func.__name__, result)
         return result
 
     return wrapper
@@ -268,9 +272,7 @@ class Experiment(object):
         -------
         ExperimentFunction: func
         """
-        dask_obj = dask.delayed(func)
-        self._codes.register(func)
-        return ExperimentFunction(self, dask_obj)
+        return self._build_step(func, persist=False)
 
     def persist(self, func):
         """
@@ -288,7 +290,13 @@ class Experiment(object):
         -------
         ExperimentFunction: func
         """
-        dask_obj = dask.delayed(persist_result(self, func))
+        return self._build_step(func, persist=True)
+
+    def _build_step(self, func, persist=False):
+        """
+        Build a single eperiment step
+        """
+        dask_obj = dask.delayed(wrap_result(self, func, persist=persist))
         self._codes.register(func)
         return ExperimentFunction(self, dask_obj)
 
@@ -310,7 +318,7 @@ class Experiment(object):
         -------
         ResultFunction: func
         """
-        dask_obj = dask.delayed(func)
+        dask_obj = dask.delayed(wrap_result(self, func))
         self._codes.register(func)
         return ResultFunction(self, dask_obj)
 

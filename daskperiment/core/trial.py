@@ -2,6 +2,7 @@ import pandas as pd
 
 from daskperiment.core.errors import (LockedTrialError,
                                       TrialIDNotFoundError)
+from daskperiment.util.hashing import get_hash
 from daskperiment.util.log import get_logger
 from daskperiment.core.parameter import ParameterManager, Undefined
 
@@ -107,6 +108,31 @@ class _TrialManager(object):
 
         self.unlock()
 
+    def maybe_pure(self, func, inputs, result):
+        """
+        Check whether the function is pureself.
+
+        Actually, it only compares the hash of the function result based on
+        its input.
+        """
+        # inputs is a tuple of args, kwargs
+        assert isinstance(inputs, tuple)
+        assert len(inputs) == 2
+        args, kwargs = inputs
+
+        input_hash = get_hash(*args, **kwargs)
+        output_hash = get_hash(result)
+
+        key = func.__name__ + '-' + input_hash
+
+        previous_hash = self._update_step_hash(key, output_hash)
+        maybe_pure = (output_hash == previous_hash)
+        if not maybe_pure:
+            msg = ('Experiment step result is changed with the same input: '
+                   '(step: {}, args: {}, kwargs: {})')
+            logger.warning(msg.format(func.__name__, args, kwargs))
+        return maybe_pure
+
     def save_parameters(self, params):
         if isinstance(params, ParameterManager):
             logger.info('Parameters: {}'.format(params.describe()))
@@ -144,8 +170,7 @@ class LocalTrialManager(_TrialManager):
         self._trial_id = 0
         self._parameters_history = {}
         self._result_history = {}
-
-        self._lock = False
+        self._hashes = {}
 
     @property
     def trial_id(self):
@@ -176,6 +201,17 @@ class LocalTrialManager(_TrialManager):
 
     def get_result_history(self):
         return self._result_history.copy()
+
+    def _update_step_hash(self, key, output_hash):
+        """
+        Update the hash result of experiment step. Return previous hash
+        if exists.
+        """
+        # return previous hash if exists, otherwise returns current
+        previous_hash = self._hashes.get(key, output_hash)
+        # overwrite with current hash
+        self._hashes[key] = output_hash
+        return previous_hash
 
 
 class RedisTrialManager(_TrialManager):
@@ -240,3 +276,20 @@ class RedisTrialManager(_TrialManager):
         keys = self.client.keys(self.get_history_key('*'))
         k = self.backend.get_trial_id_from_key
         return {k(key): self.backend.load_object(key) for key in keys}
+
+    def _update_step_hash(self, key, output_hash):
+        """
+        Update the hash result of experiment step. Return previous hash
+        if exists.
+        """
+        # include experiment_id in key
+        key = '{}:step_hash:{}'.format(self.experiment_id, key)
+        # return previous hash if exists, otherwise returns current
+        try:
+            previous_hash = self.backend.load_text(key)
+        except TrialIDNotFoundError:
+            # it doesn't use trial id...
+            previous_hash = output_hash
+        # overwrite with current hash
+        self.backend.save_text(key, output_hash)
+        return previous_hash

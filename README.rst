@@ -51,6 +51,7 @@ Benefits
   - Installed Python packages and its version
 
 - Tracking code context.
+- Reproducibility check (function purity check).
 - Auto saving and loading previous experiment history.
 - Parallel execution of experiment steps.
 - Sharing experiments.
@@ -61,7 +62,6 @@ Future Scope
 ~~~~~~~~~~~~
 
 - Web Dashboard
-- Reproducibility check (function purity check).
 - More efficient execution.
 
   - Omit execution if depending parameters are the same

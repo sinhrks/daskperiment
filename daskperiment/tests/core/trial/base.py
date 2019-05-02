@@ -112,3 +112,24 @@ class TrialManagerBase(object):
         assert isinstance(history, dict), history
         assert history[trial_id] == params
         assert history[trial_id + 1] == dict(a=1, b="xx")
+
+    def test_maybe_pure(self):
+        t = self.trials
+
+        def total(a=1, b=2, c=3):
+            return a + b + c
+
+        # correct result
+        assert t.maybe_pure(total, ([1, 2, 3], {}), 6)
+        assert t.maybe_pure(total, ([1, 2, 3], {}), 6)
+
+        # pass different result value regards function as unpure
+        assert not t.maybe_pure(total, ([1, 2, 3], {}), 5)
+        # as the internal hash is changed, it regards a function as pure
+        assert t.maybe_pure(total, ([1, 2, 3], {}), 5)
+        assert not t.maybe_pure(total, ([1, 2, 3], {}), 6)
+
+        # input is changed
+        assert t.maybe_pure(total, ([1, 2], {'c': 3}), 5)
+        assert t.maybe_pure(total, ([1, 2], {'c': 3}), 5)
+        assert not t.maybe_pure(total, ([1, 2], {'c': 3}), 6)
