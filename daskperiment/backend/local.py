@@ -72,16 +72,10 @@ class LocalBackend(_BaseBackend):
         fname = 'requirements_{}_{}.txt'.format(self.experiment_id, trial_id)
         return self.environment_dir / fname
 
-    def get_platform_info_key(self, trial_id):
-        fname = 'device_{}_{}.json'.format(self.experiment_id, trial_id)
-        return self.environment_dir / fname
-
-    def get_python_info_key(self, trial_id):
-        fname = 'python_{}_{}.json'.format(self.experiment_id, trial_id)
-        return self.environment_dir / fname
-
-    def get_git_info_key(self, trial_id):
-        fname = 'git_{}_{}.json'.format(self.experiment_id, trial_id)
+    def get_environment_key(self, env_key, trial_id, env_ext):
+        assert env_ext in ('txt', 'json')
+        fname = '{}_{}_{}.{}'.format(env_key, self.experiment_id,
+                                     trial_id, env_ext)
         return self.environment_dir / fname
 
     def save_text(self, key, text):

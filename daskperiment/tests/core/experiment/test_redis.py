@@ -1,5 +1,5 @@
 from daskperiment.testing import RedisCleanupMixin
-from .base import ExperimentBase
+from .base import ExperimentBase, ex      # noqa
 
 
 class TestRedisExperiment(ExperimentBase, RedisCleanupMixin):

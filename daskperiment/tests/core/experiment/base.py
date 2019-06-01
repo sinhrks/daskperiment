@@ -24,6 +24,19 @@ def assert_history_equal(df, exp, verbose=False):
     tm.assert_frame_equal(df.drop(dropper, axis=1), exp)
 
 
+@pytest.fixture
+def ex(request):
+    """
+    Initialize and cleanup Experiment
+    """
+    name = request.function.__name__
+    backend = request.cls.backend
+
+    ex = daskperiment.Experiment(id=name, backend=backend)
+    yield ex
+    ex._delete_cache()
+
+
 class ExperimentBase(object):
 
     @property
@@ -46,8 +59,7 @@ class ExperimentBase(object):
         with pytest.raises(ValueError, match=msg):
             daskperiment.Experiment(id="aa:aa", backend=self.backend)
 
-    def test_repr(self):
-        ex = daskperiment.Experiment(id="test_repr", backend=self.backend)
+    def test_repr(self, ex):
         fmt = 'Experiment(id: test_repr, trial_id: {}, backend: {})'
 
         assert repr(ex) == fmt.format(0, ex._backend), repr(ex)
@@ -64,20 +76,12 @@ class ExperimentBase(object):
 
         assert repr(ex) == fmt.format(1, ex._backend)
 
-        ex._delete_cache()
-
-    def test_parameter_undeclared(self):
-        ex = daskperiment.Experiment(id="test_undeclared_param",
-                                     backend=self.backend)
+    def test_parameter_undeclared(self, ex):
         with pytest.raises(daskperiment.core.errors.ParameterUndeclaredError,
                            match='Parameter is not declared'):
             ex.set_parameters(a=1)
 
-        ex._delete_cache()
-
-    def test_parameter_undefined(self):
-        ex = daskperiment.Experiment(id="test_undefined_param",
-                                     backend=self.backend)
+    def test_parameter_undefined(self, ex):
         a = ex.parameter('a')
 
         @ex.result
@@ -90,11 +94,7 @@ class ExperimentBase(object):
                            match='Parameters are not defined'):
             res.compute()
 
-        ex._delete_cache()
-
-    def test_parameter_default(self):
-        ex = daskperiment.Experiment(id="test_undefined_param",
-                                     backend=self.backend)
+    def test_parameter_default(self, ex):
         a = ex.parameter('a', default=2)
         assert a.compute() == 2
 
@@ -109,11 +109,7 @@ class ExperimentBase(object):
         ex.set_parameters(a=3)
         assert res.compute() == 4
 
-        ex._delete_cache()
-
-    def test_compute(self):
-        ex = daskperiment.Experiment(id="test_parameter",
-                                     backend=self.backend)
+    def test_compute(self, ex):
         a = ex.parameter("a")
 
         @ex.result
@@ -152,10 +148,7 @@ class ExperimentBase(object):
                                     'Success', 'Description'])
         assert_history_equal(hist, exp, verbose=True)
 
-        ex._delete_cache()
-
-    def test_pattern(self):
-        ex = daskperiment.Experiment(id="test_pattern", backend=self.backend)
+    def test_pattern(self, ex):
         a = ex.parameter("a")
 
         def inc(a):
@@ -198,11 +191,7 @@ class ExperimentBase(object):
                                     'Success', 'Description'])
         assert_history_equal(hist, exp, verbose=True)
 
-        ex._delete_cache()
-
-    def test_no_parameters(self):
-        ex = daskperiment.Experiment(id="test_no_parameter",
-                                     backend=self.backend)
+    def test_no_parameters(self, ex):
 
         @ex.result
         def comp():
@@ -234,10 +223,77 @@ class ExperimentBase(object):
                                     'Success', 'Description'])
         assert_history_equal(hist, exp, verbose=True)
 
-        ex._delete_cache()
+    def test_chain(self, ex):
+        a = ex.parameter("a")
 
-    def test_persist(self):
-        ex = daskperiment.Experiment(id="test_persist", backend=self.backend)
+        @ex
+        def inc(a):
+            return a + 1
+
+        @ex.result
+        def add(a, b):
+            return a + b
+
+        res = add(inc(a), a)
+
+        ex.set_parameters(a=1)
+        assert res.compute() == 3
+
+        ex.set_parameters(a=3)
+        assert res.compute() == 7
+
+        hist = ex.get_history()
+        exp = pd.DataFrame({'a': [1, 3],
+                            'Result': [3, 7],
+                            'Success': [True, True],
+                            'Description': [np.nan, np.nan]},
+                           index=pd.Index([1, 2], name='Trial ID'),
+                           columns=['a', 'Result', 'Success', 'Description'])
+        assert_history_equal(hist, exp)
+
+        hist = ex.get_history(verbose=False)
+        assert_history_equal(hist, exp)
+
+        hist = ex.get_history(verbose=True)
+        exp = pd.DataFrame({'a': [1, 3],
+                            'Result': [3, 7],
+                            'Result Type': ["<class 'int'>"] * 2,
+                            'Success': [True, True],
+                            'Description': [np.nan, np.nan]},
+                           index=pd.Index([1, 2], name='Trial ID'),
+                           columns=['a', 'Result', 'Result Type',
+                                    'Success', 'Description'])
+        assert_history_equal(hist, exp, verbose=True)
+
+    def test_chain_paren(self, ex):
+        a = ex.parameter("a")
+
+        @ex()
+        def inc(a):
+            return a + 1
+
+        @ex.result()
+        def add(a, b):
+            return a + b
+
+        res = add(inc(a), a)
+
+        ex.set_parameters(a=1)
+        assert res.compute() == 3
+
+        ex.set_parameters(a=3)
+        assert res.compute() == 7
+
+        hist = ex.get_history()
+        exp = pd.DataFrame({'a': [1, 3],
+                            'Result': [3, 7],
+                            'Success': [True, True],
+                            'Description': [np.nan, np.nan]},
+                           index=pd.Index([1, 2], name='Trial ID'),
+                           columns=['a', 'Result', 'Success', 'Description'])
+        assert_history_equal(hist, exp)
+
+    def test_persist(self, ex):
         a = ex.parameter("a")
 
         @ex.persist
@@ -282,10 +338,75 @@ class ExperimentBase(object):
                                     'Success', 'Description'])
         assert_history_equal(hist, exp, verbose=True)
 
-        ex._delete_cache()
+    def test_persist_paren(self, ex):
+        a = ex.parameter("a")
 
-    def test_failure(self):
-        ex = daskperiment.Experiment(id="test_failure", backend=self.backend)
+        @ex.persist()
+        def inc(a):
+            return a + 1
+
+        @ex.result()
+        def add(a, b):
+            return a + b
+
+        res = add(inc(a), a)
+
+        ex.set_parameters(a=1)
+        assert res.compute() == 3
+
+        ex.set_parameters(a=3)
+        assert res.compute() == 7
+
+        assert ex.get_persisted('inc', trial_id=1) == 2
+        assert ex.get_persisted('inc', trial_id=2) == 4
+
+        hist = ex.get_history()
+        exp = pd.DataFrame({'a': [1, 3],
+                            'Result': [3, 7],
+                            'Success': [True, True],
+                            'Description': [np.nan, np.nan]},
+                           index=pd.Index([1, 2], name='Trial ID'),
+                           columns=['a', 'Result', 'Success', 'Description'])
+        assert_history_equal(hist, exp)
+
+    def test_test_decorator_wrap(self, ex):
+        @ex
+        def func1(a):
+            return a + 1
+
+        assert func1._key.startswith('func1')
+
+        @ex.persist
+        def func2(a):
+            return a + 1
+
+        assert func2._key.startswith('func2')
+
+        @ex.result
+        def func3(a, b):
+            return a + b
+
+        assert func3._key.startswith('func3')
+
+        @ex()
+        def func4(a):
+            return a + 1
+
+        assert func4._key.startswith('func4')
+
+        @ex.persist()
+        def func5(a):
+            return a + 1
+
+        assert func5._key.startswith('func5')
+
+        @ex.result()
+        def func6(a, b):
+            return a + b
+
+        assert func6._key.startswith('func6')
+
+    def test_failure(self, ex):
         a = ex.parameter("a")
 
         @ex.result
@@ -340,10 +461,7 @@ class ExperimentBase(object):
                                     'Success', 'Description'])
         assert_history_equal(hist, exp, verbose=True)
 
-        ex._delete_cache()
-
-    def test_dup_param(self):
-        ex = daskperiment.Experiment(id="test_dup_param", backend=self.backend)
+    def test_dup_param(self, ex):
         a = ex.parameter("a")
 
         @ex.result
@@ -359,11 +477,7 @@ class ExperimentBase(object):
         ex.set_parameters(a="a")
         assert res.compute() == "aa"
 
-        ex._delete_cache()
-
-    def test_invalid_trial_id(self):
-        ex = daskperiment.Experiment(id="test_invalid_trial",
-                                     backend=self.backend)
+    def test_invalid_trial_id(self, ex):
         a = ex.parameter("a")
 
         @ex.persist
@@ -392,12 +506,7 @@ class ExperimentBase(object):
             ex.get_persisted('inc', trial_id=2)
         assert ex.get_persisted('inc', trial_id=1) == 2
 
-        ex._delete_cache()
-
-    def test_current_trial_id(self):
-        ex = daskperiment.Experiment(id="test_current_trial_id",
-                                     backend=self.backend)
-
+    def test_current_trial_id(self, ex):
         @ex.result
         def comp():
             # trial_id is unaccessible in the trial
@@ -435,9 +544,8 @@ class ExperimentBase(object):
         with pytest.raises(TrialIDNotFoundError):
             ex.current_trial_id
 
-        ex._delete_cache()
-
     def test_autoload(self):
+        # DO NOT USE ex to keep cache
         ex = daskperiment.Experiment(id="test_autoload", backend=self.backend)
         a = ex.parameter("a")
         trial_id = ex.trial_id
@@ -464,10 +572,7 @@ class ExperimentBase(object):
 
     @pytest.mark.parametrize('random_func', [random.random,
                                              np.random.random])
-    def test_random(self, random_func):
-        ex = daskperiment.Experiment(id="test_random",
-                                     backend=self.backend)
-
+    def test_random(self, random_func, ex):
         @ex.result
         def rand():
             return random_func()
@@ -476,14 +581,9 @@ class ExperimentBase(object):
         # result should be different (in almost all cases)
         assert res.compute() != res.compute()
 
-        ex._delete_cache()
-
     @pytest.mark.parametrize('random_func', [random.random,
                                              np.random.random])
-    def test_random_seed(self, random_func):
-        ex = daskperiment.Experiment(id="test_random",
-                                     backend=self.backend)
-
+    def test_random_seed(self, random_func, ex):
         @ex.result
         def rand():
             return random_func()
@@ -492,11 +592,10 @@ class ExperimentBase(object):
         assert res.compute(seed=1) != res.compute(seed=2)
         assert res.compute(seed=1) == res.compute(seed=1)
 
-        ex._delete_cache()
-
     @pytest.mark.parametrize('random_func', [random.random,
                                              np.random.random])
     def test_random_seed_global(self, random_func):
+        # DO NOT USE ex to pass seed
         ex = daskperiment.Experiment(id="test_random",
                                      backend=self.backend,
                                      seed=1)
@@ -513,8 +612,7 @@ class ExperimentBase(object):
 
         ex._delete_cache()
 
-    def test_metric(self):
-        ex = daskperiment.Experiment(id="test_metric", backend=self.backend)
+    def test_metric(self, ex):
         a = ex.parameter('a')
         assert ex.trial_id == 0
 
@@ -561,8 +659,6 @@ class ExperimentBase(object):
         exp = pd.DataFrame({1: [2, 4], 3: [2, 4]},
                            index=exp_idx, columns=exp_columns)
         tm.assert_frame_equal(res, exp)
-
-        ex._delete_cache()
 
     def test_metric_invalid_trial_id(self):
         ex = daskperiment.Experiment(id="test_metric_invalid",
@@ -611,10 +707,7 @@ class ExperimentBase(object):
         with pytest.raises(TrialIDNotFoundError, match=match):
             ex.load_metric('dummy_metric', trial_id=2)
 
-        ex._delete_cache()
-
-    def test_code(self):
-        ex = daskperiment.Experiment(id="test_code", backend=self.backend)
+    def test_code(self, ex):
         a = ex.parameter("a")
 
         @ex
@@ -652,11 +745,7 @@ def add(a, b):
         with pytest.raises(TrialIDNotFoundError, match=match):
             ex.get_code(trial_id=2)
 
-        ex._delete_cache()
-
-    def test_code_persist(self):
-        ex = daskperiment.Experiment(id="test_code_persist",
-                                     backend=self.backend)
+    def test_code_persist(self, ex):
         a = ex.parameter("a")
 
         @ex.persist
@@ -684,11 +773,7 @@ def add(a, b):
         assert res.compute() == 7
         assert ex.get_code(trial_id=1) == exp
 
-        ex._delete_cache()
-
-    def test_environment(self):
-        ex = daskperiment.Experiment(id="test_environment",
-                                     backend=self.backend)
+    def test_environment(self, ex):
         trial_id = ex.trial_id
         a = ex.parameter("a")
 
@@ -705,19 +790,18 @@ def add(a, b):
             assert isinstance(env, str)
 
             lines = env.splitlines()
-            assert len(lines) == 11
+            assert len(lines) == 10
 
             assert lines[0].startswith('Platform Information:')
             assert lines[1].startswith('Device CPU Count:')
             assert lines[2].startswith('Python Implementation:')
             assert lines[3].startswith('Python Version:')
             assert lines[4].startswith('Python Shell Mode:')
-            assert lines[5].startswith('Daskperiment Version:')
-            assert lines[6].startswith('Daskperiment Path:')
-            assert lines[7].startswith('Working Directory:')
-            assert lines[8].startswith('Git Repository:')
-            assert lines[9].startswith('Git Active Branch:')
-            assert lines[10].startswith('Git HEAD Commit:')
+            assert lines[5].startswith('Python venv:')
+            assert lines[6].startswith('Daskperiment Version:')
+            assert lines[7].startswith('Git Repository:')
+            assert lines[8].startswith('Git Active Branch:')
+            assert lines[9].startswith('Git HEAD Commit:')
 
         env = ex.get_environment()
         assert_env(env)
@@ -732,3 +816,59 @@ def add(a, b):
 
         pkg2 = ex.get_python_packages(trial_id + 1)
         assert pkg == pkg2
+
+    def test_environment_category(self, ex):
+        trial_id = ex.trial_id
+        a = ex.parameter("a")
+
+        @ex.result
+        def inc2(a):
+            return a + 2
+
+        res = inc2(a)
+
+        ex.set_parameters(a=3)
+        assert res.compute() == 5
+
+        def get_env(category):
+            env = ex.get_environment(category=category)
+            assert isinstance(env, str)
+            assert env == ex.get_environment(trial_id=trial_id + 1,
+                                             category=category)
+            return env
+
+        env = get_env(category='platform')
+        assert len(env.splitlines()) == 2
+        assert env.splitlines()[0].startswith('Platform Information:')
+
+        env = get_env(category='cpu')
+        assert len(env.splitlines()) > 5
+        assert any('Hz Advertised Raw:' in r for r in env.splitlines())
+
+        env = get_env(category='python')
+        assert len(env.splitlines()) == 9
+        assert env.splitlines()[0] == 'Python Implementation: CPython'
+
+        env = get_env(category='numpy')
+        assert len(env.splitlines()) > 5
+        assert any(r.startswith('blas_mkl_info:')
+                   for r in env.splitlines())
+
+        env = get_env(category='scipy')
+        assert len(env.splitlines()) > 5
+        assert any(r.startswith('openblas_info:')
+                   for r in env.splitlines())
+
+        env = get_env(category='pandas')
+        assert len(env.splitlines()) > 5
+        assert any(r.startswith('INSTALLED VERSIONS')
+                   for r in env.splitlines())
+
+        env = get_env(category='conda')
+        assert len(env.splitlines()) > 5
+        assert any('conda version' in r
+                   for r in env.splitlines())
+
+        env = get_env(category='git')
+        assert len(env.splitlines()) == 5
+        assert env.splitlines()[2].startswith('Git Active Branch')
