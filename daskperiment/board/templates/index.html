@@ -37,42 +37,46 @@
         </ul>
 
         <div class="tab-content">
-          <div id="tab-summary" class="tab-pane active">
+          <div id="tab-summary" class="tab-pane fade show active">
             <div id="content-summary">
               <div id="content-summary-header">
-                <select id="summary-selection">
-                  <option value="result" selected>Result</option>
-                  <option value="processtime">Process Time</option>
-                </select>
+                <div class="form-group">
+                  <select class="form-control" id="summary-selection">
+                    <option value="result" selected>Result</option>
+                    <option value="processtime">Process Time</option>
+                  </select>
+                </div>
               </div>
               <div id="content-metric-body">
                 <canvas id="chart-summary" height="25"></canvas>
               </div>
             </div>
           </div>
-          <div id="tab-metric" class="tab-pane">
+          <div id="tab-metric" class="tab-pane fade">
             <div id="content-metric">
               <div id="content-metric-header">
-                <p>
-                  {% for metric in metric_names %}
-                  <input type="checkbox" name="metric-selection[]" value="{{ metric }}" checked>
-                  {{ metric }}
-                  {% endfor %}
-                </p>
+                {% for metric in metric_names %}
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" id="metric-{{metric}}" type="checkbox" name="metric-selection[]" value="{{ metric }}" checked>
+                  <label class="form-check-label" for="metric-{{metric}}">
+                    {{ metric }}
+                  </lable>
+                </div>
+                {% endfor %}
               </div>
               <div id="content-metric-body">
                 <canvas id="chart-metric" height="50"></canvas>
               </div>
             </div>
           </div>
-          <div id="tab-code" class="tab-pane">
+          <div id="tab-code" class="tab-pane fade">
             <div id="content-code">
               <div id="content-code-header"></div>
               <pre id="content-code-body" class="prettyprint lang-py">
               </pre>
             </div>
           </div>
-          <div id="tab-environment" class="tab-pane">
+          <div id="tab-environment" class="tab-pane fade">
             <div id="content-environment">
               <div id="content-env-header"></div>
               <pre id="content-env-body"></div>

@@ -102,7 +102,9 @@ class TestBoard(object):
 
         result = json.loads(response.data)
         expected = {'datasets': [{'data': exp,
-                                  'label': 'my_metric:{}'.format(id)}],
+                                  'label': 'my_metric:{}'.format(id),
+                                  'borderColor': '#440154',
+                                  'fill': False}],
                     'labels': [0, 1, 2]}
         assert result == expected
 
@@ -112,9 +114,18 @@ class TestBoard(object):
         assert response.status == '200 OK'
 
         result = json.loads(response.data)
-        expected = {'datasets': [{'data': [0, 1, 2], 'label': 'my_metric:1'},
-                                 {'data': [1, 2, 3], 'label': 'my_metric:2'},
-                                 {'data': [2, 3, 4], 'label': 'my_metric:3'}],
+        expected = {'datasets': [{'data': [0, 1, 2],
+                                  'label': 'my_metric:1',
+                                  'borderColor': '#440154',
+                                  'fill': False},
+                                 {'data': [1, 2, 3],
+                                  'label': 'my_metric:2',
+                                  'borderColor': '#208F8C',
+                                  'fill': False},
+                                 {'data': [2, 3, 4],
+                                  'label': 'my_metric:3',
+                                  'borderColor': '#FDE724',
+                                  'fill': False}],
                     'labels': [0, 1, 2]}
         assert result == expected
 
