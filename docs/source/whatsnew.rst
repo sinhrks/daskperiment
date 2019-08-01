@@ -16,10 +16,13 @@ Enhancement
   * `scipy.show_config()`
   * `pandas.show_versions()`
 
+* Dashboard now supports to show summary, code and environment info.
+
 Bug fix
 ^^^^^^^
 
-* Log output of number of installed python packages is incorrect
+* Log output of "number of installed python packages" is incorrect
+* Dashboard can't switch display metric name
 
 v0.3.0
 ------
