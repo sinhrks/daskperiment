@@ -1,3 +1,6 @@
+recursive-include daskperiment *.html
+recursive-include daskperiment *.css
+
 include MANIFEST.in
 include LICENSE
 include README.rst

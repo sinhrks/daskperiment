@@ -49,5 +49,6 @@ Contents:
 
    whatsnew
    quickstart
+   dashboard
    commandline
    backend

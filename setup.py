@@ -38,7 +38,13 @@ setup(name=PACKAGE,
       author='sinhrks',
       author_email='sinhrks@gmail.com',
       url='http://daskperiment.readthedocs.org/en/stable',
-      license = 'BSD',
+      license='BSD',
       packages=find_packages(),
-      install_requires=list(read(REQUIREMENTS).splitlines())
+      package_data={'daskperiment': ['board/templates/*.html',
+                                     'board/statics/css/*.css']},
+      install_requires=list(read(REQUIREMENTS).splitlines()),
+      entry_points="""
+      [console_scripts]
+      daskperimentboard = daskperiment.command:board
+      """
       )

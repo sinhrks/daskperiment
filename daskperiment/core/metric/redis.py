@@ -15,6 +15,13 @@ class RedisMetricManager(_MetricManager):
     def experiment_id(self):
         return self.backend.experiment_id
 
+    def keys(self):
+        key = self._get_redis_key('*', '*')
+        keys = self.client.keys(key)
+        keys = [k.decode('utf-8').split(':')[2] for k in keys]
+        keys = sorted(list(set(keys)))
+        return keys
+
     def _get_redis_key(self, metric_key, trial_id):
         return '{}:metric:{}:{}'.format(self.experiment_id,
                                         metric_key, trial_id)
