@@ -11,37 +11,42 @@ graph, and can be executed in parallel.
 
 It can be used in both Jupyter and command line (and also in standard Python interpreter). The benefits of daskperiemnt are:
 
-- Usable in standard Python /Jupyter environment (and optionally KVS).
+- Usable in standard Python/Jupyter environment (and optionally with standard KVS).
 
-  - No need to:
-
-    - Setting up server applications.
-    - Register to cloud services.
-    - Be constrained by slightly customized Python shells.
+  - No need to setting up server applications.
+  - No registration to cloud services.
+  - Not to be constrained by slightly customized Python shells.
 
 - User-intuitive.
 
   - Minimizing modifications of existing codes.
+  - Logging automatically (no need to write additional codes for logging)
   - Performing experiments using `Dask` compatible API.
   - Easily handle experiments history (with `pandas` basic operations).
   - Requires less work to manage with Git (no need to make branch per trials).
-  - (Experimental) Web dashboard to manage trial history
+  - (Experimental) Web dashboard to manage trial history.
 
-- Tracking experiment result and its (hyper) parameters.
-- Tracking environment.
+- Tracking experiment related information
+  - Trial result and its (hyper) parameters.
+  - Code context.
+  - Environment information.
 
-  - OS Info
-  - Python version
-  - Installed package and its version
+    - Device information
+    - OS information
+    - Python version
+    - Installed Python packages and its version
+    - Git information
 
-- Tracking code context.
-- Reproducibility check (function purity check).
+- Reproducibility
+
+  - Check function purity (each step should return the same output for the same inputs)
+  - Automatic random seeding
+
 - Auto saving and loading previous experiment history.
 - Parallel execution of experiment steps.
 - Sharing experiments.
 
   - Redis backend
-
 
 Contents:
 

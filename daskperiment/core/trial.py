@@ -160,7 +160,7 @@ class _TrialManager(object):
         results = pd.DataFrame.from_dict(history,
                                          orient='index')
         results = results.reindex(columns=result_index)
-        results = parameters.join(results)
+        results = parameters.join(results, how='right')
         results.index.name = 'Trial ID'
         return results
 

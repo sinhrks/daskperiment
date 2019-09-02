@@ -8,7 +8,7 @@ import pandas.testing as tm
 
 import daskperiment
 from daskperiment.backend import LocalBackend
-from daskperiment.core.errors import TrialIDNotFoundError
+from daskperiment.core.errors import LockedTrialError, TrialIDNotFoundError
 
 
 def assert_history_equal(df, exp):
@@ -170,6 +170,31 @@ class ExperimentBase(object):
 
         ex._delete_cache()
 
+    def test_no_parameters(self):
+        ex = daskperiment.Experiment(id="test_no_parameter",
+                                     backend=self.backend)
+
+        @ex.result
+        def comp():
+            return 1
+
+        res = comp()
+
+        assert res.compute() == 1
+        assert res.compute() == 1
+
+        hist = ex.get_history()
+        exp = pd.DataFrame({'Result': [1, 1],
+                            'Result Type': ["<class 'int'>"] * 2,
+                            'Success': [True, True],
+                            'Description': [np.nan, np.nan]},
+                           index=pd.Index([1, 2], name='Trial ID'),
+                           columns=['Result', 'Result Type',
+                                    'Success', 'Description'])
+        assert_history_equal(hist, exp)
+
+        ex._delete_cache()
+
     def test_persist(self):
         ex = daskperiment.Experiment(id="test_persist", backend=self.backend)
         a = ex.parameter("a")
@@ -300,6 +325,38 @@ class ExperimentBase(object):
         with pytest.raises(TrialIDNotFoundError, match=match):
             ex.get_persisted('inc', trial_id=2)
         assert ex.get_persisted('inc', trial_id=1) == 2
+
+        ex._delete_cache()
+
+    def test_current_trial_id(self):
+        ex = daskperiment.Experiment(id="test_current_trial_id",
+                                     backend=self.backend)
+
+        @ex.result
+        def comp():
+            # trial_id is unaccessible in the trial
+            with pytest.raises(LockedTrialError):
+                ex.trial_id
+            return ex.current_trial_id + 1
+
+        res = comp()
+
+        assert res.compute() == 2
+        assert res.compute() == 3
+
+        hist = ex.get_history()
+        exp = pd.DataFrame({'Result': [2, 3],
+                            'Result Type': ["<class 'int'>"] * 2,
+                            'Success': [True, True],
+                            'Description': [np.nan, np.nan]},
+                           index=pd.Index([1, 2], name='Trial ID'),
+                           columns=['Result', 'Result Type',
+                                    'Success', 'Description'])
+        assert_history_equal(hist, exp)
+
+        # current trial id is not accessible outside of the trial
+        with pytest.raises(TrialIDNotFoundError):
+            ex.current_trial_id
 
         ex._delete_cache()
 
@@ -567,11 +624,30 @@ def add(a, b):
         ex.set_parameters(a=3)
         assert res.compute() == 5
 
+        def assert_env(env):
+            assert isinstance(env, str)
+
+            lines = env.splitlines()
+            assert len(lines) == 11
+
+            assert lines[0].startswith('Platform Information:')
+            assert lines[1].startswith('Device CPU Count:')
+            assert lines[2].startswith('Python Implementation:')
+            assert lines[3].startswith('Python Version:')
+            assert lines[4].startswith('Python Shell Mode:')
+            assert lines[5].startswith('Daskperiment Version:')
+            assert lines[6].startswith('Daskperiment Path:')
+            assert lines[7].startswith('Working Directory:')
+            assert lines[8].startswith('Git Repository:')
+            assert lines[9].startswith('Git Active Branch:')
+            assert lines[10].startswith('Git HEAD Commit:')
+
         env = ex.get_environment()
-        print(res)
-        assert env.splitlines()[1].startswith('Python: CPython')
+        assert_env(env)
+        assert env.splitlines()[2] == 'Python Implementation: CPython'
 
         env2 = ex.get_environment(trial_id + 1)
+        assert_env(env2)
         assert env == env2
 
         pkg = ex.get_python_packages()

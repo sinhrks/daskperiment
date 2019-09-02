@@ -1,3 +1,7 @@
+pandas >= 0.19.0
 dask >= 1.0.0
+click >= 7.0.0
 cloudpickle >= 0.7.0
 pyparsing >= 2.3.0
+gitpython >= 2.0.0
+redis

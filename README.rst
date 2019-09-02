@@ -8,8 +8,8 @@ daskperiment
   :alt: Latest Docs
 .. image:: https://travis-ci.org/sinhrks/daskperiment.svg?branch=master
   :target: https://travis-ci.org/sinhrks/daskperiment
-.. image:: https://codecov.io/gh/pandas-ml/pandas-ml/branch/master/graph/badge.svg
-  :target: https://codecov.io/gh/pandas-ml/pandas-ml
+.. image:: https://codecov.io/gh/sinhrks/daskperiment/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/sinhrks/daskperiment
 
 Overview
 ~~~~~~~~
@@ -27,13 +27,11 @@ graph, and can be executed in parallel.
 Benefits
 ~~~~~~~~
 
-- Usable in standard Python /Jupyter environment (and optionally KVS).
+- Usable in standard Python/Jupyter environment (and optionally with standard KVS).
 
-  - No need to:
-
-    - Setting up server applications.
-    - Register to cloud services.
-    - Be constrained by slightly customized Python shells.
+  - No need to setting up server applications.
+  - No registration to cloud services.
+  - Not to be constrained by slightly customized Python shells.
 
 - User-intuitive.
 
@@ -41,17 +39,24 @@ Benefits
   - Performing experiments using `Dask` compatible API.
   - Easily handle experiments history (with `pandas` basic operations).
   - Requires less work to manage with Git (no need to make branch per trials).
+  - (Experimental) Web dashboard to manage trial history.
 
-- Tracking experiment result and its (hyper) parameters.
-- Tracking environment.
+- Tracking experiment related information
+  - Trial result and its (hyper) parameters.
+  - Code context.
+  - Environment information.
 
-  - Device information
-  - OS information
-  - Python version
-  - Installed Python packages and its version
+    - Device information
+    - OS information
+    - Python version
+    - Installed Python packages and its version
+    - Git information
 
-- Tracking code context.
-- Reproducibility check (function purity check).
+- Reproducibility
+
+  - Check function purity (each step should return the same output for the same inputs)
+  - Automatic random seeding
+
 - Auto saving and loading previous experiment history.
 - Parallel execution of experiment steps.
 - Sharing experiments.
@@ -61,7 +66,6 @@ Benefits
 Future Scope
 ~~~~~~~~~~~~
 
-- Web Dashboard
 - More efficient execution.
 
   - Omit execution if depending parameters are the same
