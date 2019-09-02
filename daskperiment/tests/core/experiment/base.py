@@ -1,5 +1,7 @@
 import pytest
 
+import random
+
 import numpy as np
 import pandas as pd
 import pandas.testing as tm
@@ -10,10 +12,11 @@ from daskperiment.core.errors import TrialIDNotFoundError
 
 
 def assert_history_equal(df, exp):
-    exp_index = ['Result', 'Result Type', 'Success', 'Finished',
+    exp_index = ['Seed', 'Result', 'Result Type', 'Success', 'Finished',
                  'Process Time', 'Description']
-    tm.assert_index_equal(df.columns[-6:], pd.Index(exp_index))
-    tm.assert_frame_equal(df.drop(['Finished', 'Process Time'], axis=1),
+    tm.assert_index_equal(df.columns[-len(exp_index):], pd.Index(exp_index))
+    tm.assert_frame_equal(df.drop(['Seed', 'Finished', 'Process Time'],
+                                  axis=1),
                           exp)
 
 
@@ -305,6 +308,51 @@ class ExperimentBase(object):
 
         # DO NOT DELETE CACHE to test auto-loaded instance
         # ex._delete_cache()
+
+    @pytest.mark.parametrize('random_func', [random.random,
+                                             np.random.random])
+    def test_random(self, random_func):
+        ex = daskperiment.Experiment(id="test_random",
+                                     backend=self.backend)
+
+        @ex.result
+        def rand():
+            return random_func()
+
+        res = rand()
+        # result should be different (in almost all cases)
+        assert res.compute() != res.compute()
+
+    @pytest.mark.parametrize('random_func', [random.random,
+                                             np.random.random])
+    def test_random_seed(self, random_func):
+        ex = daskperiment.Experiment(id="test_random",
+                                     backend=self.backend)
+
+        @ex.result
+        def rand():
+            return random_func()
+
+        res = rand()
+        assert res.compute(seed=1) != res.compute(seed=2)
+        assert res.compute(seed=1) == res.compute(seed=1)
+
+    @pytest.mark.parametrize('random_func', [random.random,
+                                             np.random.random])
+    def test_random_seed_global(self, random_func):
+        ex = daskperiment.Experiment(id="test_random",
+                                     backend=self.backend,
+                                     seed=1)
+
+        @ex.result
+        def rand():
+            return random_func()
+
+        res = rand()
+        assert res.compute() == res.compute()
+        assert res.compute() == res.compute(seed=1)
+        assert res.compute(seed=1) != res.compute(seed=2)
+        assert res.compute(seed=1) == res.compute(seed=1)
 
     def test_metric(self):
         ex = daskperiment.Experiment(id="test_metric", backend=self.backend)
