@@ -26,7 +26,7 @@ class MetricManagerBase(object):
         with pytest.raises(ValueError, match=msg):
             m.save(1, trial_id=11, epoch=1, value=2)
 
-        msg = 'Metric name cannot contain colon '
+        msg = 'Metric name must be valid as python identifier:'
         with pytest.raises(ValueError, match=msg):
             m.save("aa:aa", trial_id=11, epoch=1, value=2)
 

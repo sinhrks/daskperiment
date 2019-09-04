@@ -1,15 +1,15 @@
 import os
 
 
-def validate_key(key, keyname='Key'):
+def validate_identifier(key, keyname='Key'):
     """
     Check input is valid key (Experiment id, metric name...)
     """
     if not isinstance(key, str):
         msg = '{} must be str, given: {}{}'
         raise ValueError(msg.format(keyname, key, type(key)))
-    if ':' in key:
-        msg = '{} cannot contain colon (:): {}'
+    if not key.isidentifier():
+        msg = '{} must be valid as python identifier: {}'
         raise ValueError(msg.format(keyname, key))
     return key
 
