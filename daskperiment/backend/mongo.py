@@ -1,4 +1,5 @@
 import os
+import urllib
 
 from daskperiment.backend.base import _NoSQLBackend
 from daskperiment.util.log import get_logger
@@ -39,7 +40,19 @@ class MongoBackend(_NoSQLBackend):
 
     def __init__(self, experiment_id, uri):
         super().__init__(experiment_id)
-        # TODO: handle mongo DB instance
+
+        import pymongo
+
+        if isinstance(uri, pymongo.database.Database):
+            dbname = uri.name
+            self._client = uri.client
+            host, port = uri.client.address
+            uri = 'mongodb://{}:{}/{}'.format(host, port, dbname)
+
+        parsed = urllib.parse.urlparse(uri)
+        if parsed.path == '':
+            msg = 'MongoDB database name is not specified in URI: {}'
+            raise ValueError(msg.format(uri))
         self.uri = uri
 
     @property

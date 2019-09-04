@@ -245,4 +245,5 @@ class _TrialManager(object):
         results = results.reindex(columns=result_index)
         results = parameters.join(results, how='right')
         results.index.name = 'Trial ID'
+        results = results.sort_index()
         return results

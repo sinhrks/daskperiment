@@ -24,8 +24,6 @@ class _NoSQLMetricManager(_MetricManager):
             else:
                 raise TrialIDNotFoundError(trial_id)
 
-            self._check_empty_reason(trial_id, metric_key)
-
         values = [pickle.loads(value) for value in values]
 
         return self._wrap_single_result(values, trial_id)
